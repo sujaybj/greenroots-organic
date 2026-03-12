@@ -1,0 +1,23 @@
+# ── Environment variables (NEVER push these) ──
+server/.env
+client/.env
+.env
+
+# ── Dependencies (too large, reinstalled with npm install) ──
+node_modules/
+server/node_modules/
+client/node_modules/
+
+# ── Build output ──
+client/build/
+
+# ── Logs ──
+*.log
+npm-debug.log*
+
+# ── OS files ──
+.DS_Store
+Thumbs.db
+
+# ── VS Code ──
+.vscode/
