@@ -69,5 +69,17 @@ API.interceptors.response.use(
     return Promise.reject(error);
   }
 );
-
+// Auto retry once on network errors (backend waking up)
+API.interceptors.response.use(
+  response => response,
+  async error => {
+    const config = error.config;
+    if (!config._retry && !error.response) {
+      config._retry = true;
+      await new Promise(resolve => setTimeout(resolve, 5000)); // wait 5s
+      return API(config); // retry
+    }
+    return Promise.reject(error);
+  }
+);
 export default API;

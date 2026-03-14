@@ -46,16 +46,14 @@ const authLimiter = rateLimit({
 // ─── Core Middleware ────────────────────────────────────────
 app.use(cors({
   origin: function (origin, callback) {
-    const allowedOrigins = [
-      'http://localhost:3000',
-      'https://greenroots-organic.vercel.app',
-    ];
-    // Allow all Vercel preview deployments
-    if (!origin || allowedOrigins.includes(origin) || origin.endsWith('.vercel.app')) {
-      callback(null, true);
-    } else {
-      callback(new Error('Not allowed by CORS'));
-    }
+    // Allow requests with no origin (mobile apps, Postman)
+    if (!origin) return callback(null, true);
+    // Allow localhost
+    if (origin.includes('localhost')) return callback(null, true);
+    // Allow ALL Vercel deployments for this project
+    if (origin.endsWith('.vercel.app')) return callback(null, true);
+    // Block everything else
+    callback(new Error('Not allowed by CORS'));
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
@@ -89,5 +87,17 @@ mongoose.connect(process.env.MONGO_URI)
     console.error('❌ MongoDB connection failed:', err.message);
     process.exit(1);
   });
+
+  // ── Keep Render free tier awake ──────────────────────────────
+if (process.env.NODE_ENV === 'production') {
+  const https = require('https');
+  setInterval(() => {
+    https.get('https://greenroots-backend.onrender.com/api/health', (res) => {
+      console.log(`🏓 Keep-alive ping: ${res.statusCode}`);
+    }).on('error', (e) => {
+      console.log('Keep-alive error:', e.message);
+    });
+  }, 14 * 60 * 1000); // every 14 minutes
+}
 
 module.exports = app;
