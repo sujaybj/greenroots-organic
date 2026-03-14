@@ -21,15 +21,22 @@ export const fetchProduct = createAsyncThunk('product/fetchOne', async (id, { re
   }
 });
 
-export const fetchCategories = createAsyncThunk('product/fetchCategories', async () => {
-  const res = await API.get('/products/categories');
-  return res.data;
+export const fetchCategories = createAsyncThunk('product/fetchCategories', async (_, { rejectWithValue }) => {
+  try {
+    const res = await API.get('/products/categories');
+    return res.data;
+  } catch (err) {
+    return rejectWithValue(err.response?.data?.message);
+  }
 });
 
 const productSlice = createSlice({
   name: 'product',
   initialState: {
-    products: [], total: 0, pages: 0, page: 1,
+    products: [],
+    total: 0,
+    pages: 0,
+    page: 1,
     currentProduct: null,
     categories: [],
     loading: false,
@@ -42,18 +49,38 @@ const productSlice = createSlice({
   },
   extraReducers: (builder) => {
     builder
-      .addCase(fetchProducts.pending, (state) => { state.loading = true; })
+      // fetchProducts
+      .addCase(fetchProducts.pending, (state) => { state.loading = true; state.error = null; })
       .addCase(fetchProducts.fulfilled, (state, action) => {
-  state.loading = false;
-  state.products = action.payload.products || [];
-  state.total = action.payload.total || 0;
-  state.pages = action.payload.pages || 0;
-})
-      .addCase(fetchProducts.rejected, (state, action) => { state.loading = false; state.error = action.payload; })
-      .addCase(fetchProduct.pending, (state) => { state.loading = true; state.currentProduct = null; })
-      .addCase(fetchProduct.fulfilled, (state, action) => { state.loading = false; state.currentProduct = action.payload.product; })
-      .addCase(fetchProduct.rejected, (state) => { state.loading = false; })
-      .addCase(fetchCategories.fulfilled, (state, action) => {state.categories = action.payload.categories || action.payload || [];})
+        state.loading = false;
+        // Guard: ensure we always set arrays, never undefined
+        state.products = Array.isArray(action.payload?.products) ? action.payload.products : [];
+        state.total    = action.payload?.total  || 0;
+        state.pages    = action.payload?.pages  || 0;
+      })
+      .addCase(fetchProducts.rejected, (state, action) => {
+        state.loading  = false;
+        state.error    = action.payload;
+        state.products = []; // ← never leave products as undefined
+      })
+
+      // fetchProduct
+      .addCase(fetchProduct.pending,   (state) => { state.loading = true; state.currentProduct = null; })
+      .addCase(fetchProduct.fulfilled, (state, action) => {
+        state.loading        = false;
+        state.currentProduct = action.payload?.product || null;
+      })
+      .addCase(fetchProduct.rejected,  (state) => { state.loading = false; })
+
+      // fetchCategories
+      .addCase(fetchCategories.fulfilled, (state, action) => {
+        // API returns { success: true, categories: [...] }
+        const cats = action.payload?.categories;
+        state.categories = Array.isArray(cats) ? cats : [];
+      })
+      .addCase(fetchCategories.rejected, (state) => {
+        state.categories = []; // ← never leave categories as undefined
+      });
   },
 });
 
