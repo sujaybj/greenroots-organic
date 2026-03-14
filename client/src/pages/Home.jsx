@@ -10,8 +10,8 @@ const CATEGORY_ICONS = { Vegetables:'🥦', Fruits:'🍎', Dairy:'🥛', Grains:
 
 const Home = () => {
   const dispatch = useDispatch();
-  const { products, loading, categories } = useSelector(s => s.product);
-  const [featured, setFeatured] = useState([]);
+const { products, loading, categories = [] } = useSelector(state => state.product);
+ const [featuredProducts, setFeaturedProducts] = useState([]);
   useEffect(() => { dispatch(fetchProducts({ featured: true, limit: 8 })); dispatch(fetchCategories()); }, [dispatch]);
   useEffect(() => { setFeatured(products); }, [products]);
 
@@ -74,7 +74,8 @@ const Home = () => {
             <p style={{ color: '#6B7280', marginTop: '8px', fontSize: 'clamp(0.85rem,2vw,1rem)' }}>Explore our wide range of organic products</p>
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(100px,1fr))', gap: 'clamp(8px,2vw,16px)' }}>
-            {categories.map(cat => (
+         {(categories || []).map(cat => (
+          
               <Link key={cat._id} to={`/products?category=${cat._id}`}
                 style={{ textDecoration: 'none', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', padding: 'clamp(12px,2vw,20px) 8px', background: 'white', borderRadius: '12px', boxShadow: '0 2px 8px rgba(0,0,0,0.06)', border: '1.5px solid #F3F4F6', transition: 'all 0.2s' }}
                 onMouseOver={e => { e.currentTarget.style.borderColor='#2D6A4F'; e.currentTarget.style.transform='translateY(-3px)'; }}
@@ -100,7 +101,7 @@ const Home = () => {
           </div>
           {loading ? <div style={{ display: 'flex', justifyContent: 'center', padding: '40px' }}><Loader /></div> : (
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(min(100%,190px),1fr))', gap: 'clamp(10px,2vw,20px)' }}>
-              {featured.map(p => <ProductCard key={p._id} product={p} />)}
+            {(featuredProducts || []).map(p => <ProductCard key={p._id} product={p} />)}
             </div>
           )}
         </div>
