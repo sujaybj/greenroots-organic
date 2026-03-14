@@ -13,7 +13,7 @@ const Home = () => {
 const { products = [], loading, categories = [] } = useSelector(state => state.product);
  const [featuredProducts, setFeaturedProducts] = useState([]);
   useEffect(() => { dispatch(fetchProducts({ featured: true, limit: 8 })); dispatch(fetchCategories()); }, [dispatch]);
-  useEffect(() => { setFeatured(products); }, [products]);
+  useEffect(() => { setFeaturedProducts(products); }, [products]);
 
   return (
     <>
