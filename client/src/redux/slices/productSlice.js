@@ -44,16 +44,16 @@ const productSlice = createSlice({
     builder
       .addCase(fetchProducts.pending, (state) => { state.loading = true; })
       .addCase(fetchProducts.fulfilled, (state, action) => {
-        state.loading = false;
-        state.products = action.payload.products;
-        state.total = action.payload.total;
-        state.pages = action.payload.pages;
-      })
+  state.loading = false;
+  state.products = action.payload.products || [];
+  state.total = action.payload.total || 0;
+  state.pages = action.payload.pages || 0;
+})
       .addCase(fetchProducts.rejected, (state, action) => { state.loading = false; state.error = action.payload; })
       .addCase(fetchProduct.pending, (state) => { state.loading = true; state.currentProduct = null; })
       .addCase(fetchProduct.fulfilled, (state, action) => { state.loading = false; state.currentProduct = action.payload.product; })
       .addCase(fetchProduct.rejected, (state) => { state.loading = false; })
-      .addCase(fetchCategories.fulfilled, (state, action) => { state.categories = action.payload.categories; });
+      .addCase(fetchCategories.fulfilled, (state, action) => {state.categories = action.payload.categories || action.payload || [];})
   },
 });
 

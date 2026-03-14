@@ -10,7 +10,7 @@ const CATEGORY_ICONS = { Vegetables:'🥦', Fruits:'🍎', Dairy:'🥛', Grains:
 
 const Home = () => {
   const dispatch = useDispatch();
-const { products, loading, categories = [] } = useSelector(state => state.product);
+const { products = [], loading, categories = [] } = useSelector(state => state.product);
  const [featuredProducts, setFeaturedProducts] = useState([]);
   useEffect(() => { dispatch(fetchProducts({ featured: true, limit: 8 })); dispatch(fetchCategories()); }, [dispatch]);
   useEffect(() => { setFeatured(products); }, [products]);
