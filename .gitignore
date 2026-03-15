@@ -2,6 +2,8 @@
 server/.env
 # client/.env
 .env
+server/.env
+client/.env.local
 
 # ── Dependencies (too large, reinstalled with npm install) ──
 node_modules/
