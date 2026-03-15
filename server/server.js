@@ -17,6 +17,7 @@ const cartRoutes    = require('./routes/cartRoutes');
 const orderRoutes   = require('./routes/orderRoutes');
 const paymentRoutes = require('./routes/paymentRoutes');
 const adminRoutes   = require('./routes/adminRoutes');
+const contactRoutes = require('./routes/contactRoutes');
 const { errorHandler, notFound } = require('./middleware/errorMiddleware');
 
 const app = express();
@@ -74,6 +75,7 @@ app.use('/api/cart',     cartRoutes);
 app.use('/api/orders',   orderRoutes);
 app.use('/api/payment',  paymentRoutes);
 app.use('/api/admin',    adminRoutes);
+app.use('/api/contact',  contactRoutes);
 app.get('/api/health',   (req, res) => res.json({ status: 'OK', message: 'GreenRoots backend is running 🌿' }));
 
 // ─── Error Handling ───────────────────────────────────────────
