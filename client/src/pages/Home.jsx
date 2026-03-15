@@ -35,7 +35,7 @@ const Home = () => {
 
       {/* ─── Hero ─── */}
       <section style={{ background: 'linear-gradient(135deg, #1B4332 0%, #2D6A4F 60%, #40916C 100%)', padding: '80px 0', overflow: 'hidden' }}>
-        <div className="container" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '40px', alignItems: 'center' }}>
+        <div className="container hero-grid">
           <motion.div initial={{ x: -60, opacity: 0 }} animate={{ x: 0, opacity: 1 }} transition={{ duration: 0.7 }}>
             <span style={{ background: 'rgba(116,198,157,0.3)', color: '#74C69D', padding: '6px 16px', borderRadius: '100px', fontSize: '0.85rem', fontWeight: 600 }}>🌱 100% Certified Organic</span>
             <h1 style={{ color: 'white', fontSize: 'clamp(2rem, 4vw, 3.2rem)', marginTop: '16px', lineHeight: 1.2, fontFamily: 'Playfair Display, serif' }}>
@@ -58,6 +58,7 @@ const Home = () => {
             </div>
           </motion.div>
           <motion.div initial={{ x: 60, opacity: 0 }} animate={{ x: 0, opacity: 1 }} transition={{ duration: 0.7, delay: 0.2 }}
+            className="hero-emoji"
             style={{ display: 'flex', justifyContent: 'center', fontSize: '180px', lineHeight: 1 }}>
             🥬
           </motion.div>
