@@ -48,7 +48,7 @@ const SOCIALS = [
   },
   {
     label: 'YouTube',
-    href: 'https://youtube.com/@wilddiaries',
+    href: 'https://youtube.com/@SrujanAcharBalige',
     Icon: YoutubeIcon,
     bg: '#FF0000',
   },
