@@ -93,7 +93,7 @@ const Contact = () => {
     },
     {
       platform: 'YouTube',
-      handle: 'Wild Diaries',
+      handle: 'KA18 Srujan vlogs',
       href: 'https://youtube.com/@SrujanAcharBalige',
       bg: '#FF0000',
       icon: (
