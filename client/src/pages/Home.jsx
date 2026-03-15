@@ -205,7 +205,7 @@ const Home = () => {
   return (
     <>
       <Helmet>
-        <title>GreenRoots Organics - Pure, Natural, Organic</title>
+        <title>GreenRoots - Pure, Natural, Organic</title>
         <meta name="description" content="Shop certified organic vegetables, fruits, dairy, and more. Farm fresh, delivered to your door." />
       </Helmet>
 
