@@ -1,8 +1,16 @@
 import axios from 'axios';
 import toast from 'react-hot-toast';
 
+// ── Auto-detect API URL ───────────────────────────────────────
+// Local:      proxy in package.json handles /api → localhost:5000
+// Production: must use full Render URL
+const isProduction = window.location.hostname !== 'localhost';
+const BASE_URL = isProduction
+  ? 'https://greenroots-backend.onrender.com/api'
+  : '/api';
+
 const API = axios.create({
-  baseURL: '/api',
+  baseURL: BASE_URL,
   withCredentials: true,
   headers: { 'Content-Type': 'application/json' },
 });
@@ -60,7 +68,6 @@ API.interceptors.response.use(
       }
     }
 
-    // Show error toast for non-auth errors
     const message = error.response?.data?.message;
     if (message && error.response?.status !== 401) {
       toast.error(message);
@@ -69,17 +76,5 @@ API.interceptors.response.use(
     return Promise.reject(error);
   }
 );
-// Auto retry once on network errors (backend waking up)
-API.interceptors.response.use(
-  response => response,
-  async error => {
-    const config = error.config;
-    if (!config._retry && !error.response) {
-      config._retry = true;
-      await new Promise(resolve => setTimeout(resolve, 5000)); // wait 5s
-      return API(config); // retry
-    }
-    return Promise.reject(error);
-  }
-);
+
 export default API;
