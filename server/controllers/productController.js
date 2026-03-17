@@ -103,6 +103,38 @@ exports.updateDeliveryAreas = async (req, res) => {
   }
 };
 
+// @desc    Create product (Admin)
+exports.createProduct = async (req, res) => {
+  try {
+    const images = req.files?.map(f => ({ url: f.path, publicId: f.filename })) || [];
+    const product = await Product.create({ ...req.body, images, createdBy: req.user._id });
+    res.status(201).json({ success: true, product });
+  } catch (error) { res.status(500).json({ success: false, message: error.message }); }
+};
+
+// @desc    Update product (Admin)
+exports.updateProduct = async (req, res) => {
+  try {
+    let product = await Product.findById(req.params.id);
+    if (!product) return res.status(404).json({ success: false, message: 'Product not found' });
+    if (req.files?.length > 0) {
+      req.body.images = [...(product.images || []), ...req.files.map(f => ({ url: f.path, publicId: f.filename }))];
+    }
+    product = await Product.findByIdAndUpdate(req.params.id, req.body, { new: true, runValidators: true });
+    res.status(200).json({ success: true, product });
+  } catch (error) { res.status(500).json({ success: false, message: error.message }); }
+};
+
+// @desc    Delete product (Admin)
+exports.deleteProduct = async (req, res) => {
+  try {
+    const product = await Product.findById(req.params.id);
+    if (!product) return res.status(404).json({ success: false, message: 'Product not found' });
+    await product.deleteOne();
+    res.status(200).json({ success: true, message: 'Product deleted' });
+  } catch (error) { res.status(500).json({ success: false, message: error.message }); }
+};
+
 // @desc    Add review
 exports.addReview = async (req, res) => {
   try {
