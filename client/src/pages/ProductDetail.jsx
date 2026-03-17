@@ -5,7 +5,7 @@ import { Helmet } from 'react-helmet-async';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   MapPin, CheckCircle2, XCircle, Loader2,
-  Globe, AlertCircle, ShoppingCart, Zap, Star,
+  Globe, AlertCircle, ShoppingCart, Zap,
 } from 'lucide-react';
 import { fetchProduct } from '../redux/slices/productSlice';
 import { addToCart } from '../redux/slices/cartSlice';
@@ -15,24 +15,21 @@ import API from '../utils/api';
 const StarRating = ({ rating, interactive = false, onRate }) => (
   <div style={{ display: 'flex', gap: '3px' }}>
     {[1,2,3,4,5].map(star => (
-      <Star key={star}
-        size={interactive ? 20 : 14}
-        fill={star <= rating ? '#F59E0B' : 'none'}
-        color={star <= rating ? '#F59E0B' : '#D1D5DB'}
-        strokeWidth={1.5}
+      <span key={star}
         onClick={() => interactive && onRate?.(star)}
-        style={{ cursor: interactive ? 'pointer' : 'default' }}/>
+        style={{ fontSize: interactive ? '1.3rem' : '1rem', color: star <= rating ? '#F59E0B' : '#D1D5DB', cursor: interactive ? 'pointer' : 'default' }}>
+        ★
+      </span>
     ))}
   </div>
 );
 
-// ── Delivery Checker Component ────────────────────────────────
+// ── Real-time Delivery Checker ────────────────────────────────
 const DeliveryChecker = ({ productId, isNationwide, deliverableAreas = [], deliveryNote }) => {
   const [pincode, setPincode]   = useState('');
   const [checking, setChecking] = useState(false);
-  const [result, setResult]     = useState(null); // { deliverable, note }
+  const [result,   setResult]   = useState(null);
 
-  // Auto-check when pincode is 6 digits
   const checkDelivery = useCallback(async (pin) => {
     if (pin.length !== 6) { setResult(null); return; }
     setChecking(true);
@@ -46,26 +43,26 @@ const DeliveryChecker = ({ productId, isNationwide, deliverableAreas = [], deliv
 
   useEffect(() => { checkDelivery(pincode); }, [pincode, checkDelivery]);
 
-  // Nationwide shortcut
+  // Nationwide
   if (isNationwide) {
     return (
       <div style={{ background: '#F0FDF4', border: '1px solid #D1FAE5', borderRadius: '12px', padding: '14px 16px', display: 'flex', alignItems: 'center', gap: '10px' }}>
         <Globe size={18} color="#2D6A4F"/>
         <div>
-          <p style={{ fontWeight: 700, fontSize: '0.88rem', color: '#065F46', margin: 0 }}>Delivered across all of India</p>
+          <p style={{ fontWeight: 700, fontSize: '0.88rem', color: '#065F46', margin: 0 }}>We deliver to you</p>
           {deliveryNote && <p style={{ fontSize: '0.78rem', color: '#6B7280', margin: '3px 0 0' }}>{deliveryNote}</p>}
         </div>
       </div>
     );
   }
 
-  // No delivery areas set
+  // No areas configured
   if (!isNationwide && deliverableAreas.length === 0) {
     return (
       <div style={{ background: '#FFF8E1', border: '1px solid #FDE68A', borderRadius: '12px', padding: '14px 16px', display: 'flex', alignItems: 'center', gap: '10px' }}>
         <AlertCircle size={18} color="#D97706"/>
         <p style={{ fontSize: '0.85rem', color: '#92400E', margin: 0, fontWeight: 600 }}>
-          Delivery area not yet configured. Contact us for availability.
+          Contact us to check delivery in your area.
         </p>
       </div>
     );
@@ -77,38 +74,37 @@ const DeliveryChecker = ({ productId, isNationwide, deliverableAreas = [], deliv
         <MapPin size={14} color="#2D6A4F"/> Check Delivery
       </p>
 
-      <div style={{ display: 'flex', gap: '8px', marginBottom: '10px' }}>
-        <div style={{ flex: 1, position: 'relative' }}>
-          <input
-            type="text" inputMode="numeric" maxLength={6}
-            placeholder="Enter 6-digit pincode"
-            value={pincode}
-            onChange={e => setPincode(e.target.value.replace(/\D/g,'').slice(0,6))}
-            style={{ width: '100%', padding: '10px 14px', border: `1.5px solid ${result?.deliverable === false ? '#FCA5A5' : result?.deliverable === true ? '#86EFAC' : '#E5E7EB'}`, borderRadius: '9px', fontSize: '0.92rem', fontFamily: 'Inter,sans-serif', outline: 'none', background: 'white', letterSpacing: '0.1em', fontWeight: 600 }}/>
-          {checking && (
-            <Loader2 size={14} color="#2D6A4F" style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', animation: 'spin 1s linear infinite' }}/>
-          )}
-        </div>
+      <div style={{ position: 'relative', marginBottom: '10px' }}>
+        <input
+          type="text" inputMode="numeric" maxLength={6}
+          placeholder="Enter 6-digit pincode"
+          value={pincode}
+          onChange={e => setPincode(e.target.value.replace(/\D/g,'').slice(0,6))}
+          style={{ width: '100%', padding: '10px 40px 10px 14px', border: `1.5px solid ${result?.deliverable === false ? '#FCA5A5' : result?.deliverable === true ? '#86EFAC' : '#E5E7EB'}`, borderRadius: '9px', fontSize: '0.92rem', fontFamily: 'Inter,sans-serif', outline: 'none', background: 'white', letterSpacing: '0.1em', fontWeight: 600, boxSizing: 'border-box' }}
+        />
+        {checking && (
+          <Loader2 size={15} color="#2D6A4F" style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', animation: 'spin 1s linear infinite' }}/>
+        )}
       </div>
 
       {/* Result */}
       <AnimatePresence>
         {result && !checking && (
           <motion.div initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
-            style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', padding: '10px 12px', background: result.deliverable ? '#F0FDF4' : '#FFF1F2', borderRadius: '8px', border: `1px solid ${result.deliverable ? '#D1FAE5' : '#FFE4E6'}` }}>
+            style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', padding: '10px 12px', background: result.deliverable ? '#F0FDF4' : '#FFF1F2', borderRadius: '8px', border: `1px solid ${result.deliverable ? '#D1FAE5' : '#FFE4E6'}`, marginBottom: '10px' }}>
             {result.deliverable === true  && <CheckCircle2 size={16} color="#16A34A" style={{ flexShrink: 0, marginTop: '1px' }}/>}
             {result.deliverable === false && <XCircle      size={16} color="#DC2626" style={{ flexShrink: 0, marginTop: '1px' }}/>}
             {result.deliverable === null  && <AlertCircle  size={16} color="#D97706" style={{ flexShrink: 0, marginTop: '1px' }}/>}
             <div>
               <p style={{ fontWeight: 700, fontSize: '0.83rem', color: result.deliverable ? '#15803D' : '#DC2626', margin: 0 }}>
                 {result.deliverable === true  ? `Delivery available to ${pincode}` :
-                 result.deliverable === false ? `Not deliverable to ${pincode} yet` :
+                 result.deliverable === false ? `Not yet deliverable to ${pincode}` :
                  'Unable to check pincode'}
               </p>
               {result.note && <p style={{ fontSize: '0.76rem', color: '#6B7280', margin: '3px 0 0', lineHeight: 1.5 }}>{result.note}</p>}
               {result.deliverable === false && (
                 <p style={{ fontSize: '0.75rem', color: '#6B7280', margin: '4px 0 0' }}>
-                  Contact us at <a href="mailto:sujaybj8@gmail.com" style={{ color: '#2D6A4F', fontWeight: 600 }}>sujaybj8@gmail.com</a> to request delivery in your area.
+                  Contact: <a href="mailto:sujaybj8@gmail.com" style={{ color: '#2D6A4F', fontWeight: 600 }}>sujaybj8@gmail.com</a>
                 </p>
               )}
             </div>
@@ -116,16 +112,16 @@ const DeliveryChecker = ({ productId, isNationwide, deliverableAreas = [], deliv
         )}
       </AnimatePresence>
 
-      {/* Available states */}
-      {deliverableAreas.length > 0 && (
-        <div style={{ marginTop: '10px' }}>
+      {/* Available states list */}
+      {deliverableAreas.filter(a => a.isActive).length > 0 && (
+        <div>
           <p style={{ fontSize: '0.72rem', color: '#9CA3AF', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '6px' }}>
             Currently delivering to
           </p>
           <div style={{ display: 'flex', gap: '5px', flexWrap: 'wrap' }}>
             {deliverableAreas.filter(a => a.isActive).map((area, i) => (
               <span key={i} style={{ background: '#F0FDF4', border: '1px solid #D1FAE5', color: '#065F46', fontSize: '0.72rem', fontWeight: 600, padding: '3px 8px', borderRadius: '100px' }}>
-                {area.state}{area.cities.length > 0 ? ` (${area.cities.join(', ')})` : ''}
+                {area.state}{area.cities?.length > 0 ? ` (${area.cities.join(', ')})` : ''}
               </span>
             ))}
           </div>
@@ -148,10 +144,10 @@ const ProductDetail = () => {
   const navigate   = useNavigate();
   const { currentProduct: product, loading } = useSelector(s => s.product);
   const { isAuthenticated } = useSelector(s => s.auth);
-  const [qty, setQty]         = useState(1);
-  const [activeImg, setActiveImg] = useState(0);
-  const [tab, setTab]         = useState('desc');
-  const [review, setReview]   = useState({ rating: 5, title: '', comment: '' });
+  const [qty,        setQty]        = useState(1);
+  const [activeImg,  setActiveImg]  = useState(0);
+  const [tab,        setTab]        = useState('desc');
+  const [review,     setReview]     = useState({ rating: 5, title: '', comment: '' });
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => { dispatch(fetchProduct(id)); }, [id, dispatch]);
@@ -165,7 +161,7 @@ const ProductDetail = () => {
   const handleReviewSubmit = async (e) => {
     e.preventDefault();
     if (!isAuthenticated) { navigate('/login'); return; }
-    if (!review.title || !review.comment) { return; }
+    if (!review.title || !review.comment) return;
     setSubmitting(true);
     try {
       await API.post(`/products/${id}/review`, review);
@@ -178,13 +174,13 @@ const ProductDetail = () => {
     <>
       <Helmet><title>{product.name} — GreenRoots Organics</title></Helmet>
       <div className="container" style={{ paddingTop: '32px', paddingBottom: '64px' }}>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(300px,1fr))', gap: '48px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '48px' }}>
 
-          {/* ── Images ── */}
+          {/* Images */}
           <div>
-            <div style={{ borderRadius: '16px', overflow: 'hidden', marginBottom: '10px', background: '#F9FAFB', aspectRatio: '1' }}>
+            <div style={{ borderRadius: '16px', overflow: 'hidden', marginBottom: '10px', background: '#F9FAFB' }}>
               <img src={product.images?.[activeImg]?.url || '/placeholder.jpg'} alt={product.name}
-                style={{ width: '100%', height: '100%', objectFit: 'cover' }}/>
+                style={{ width: '100%', aspectRatio: '1', objectFit: 'cover' }}/>
             </div>
             <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
               {product.images?.map((img, i) => (
@@ -194,23 +190,22 @@ const ProductDetail = () => {
             </div>
           </div>
 
-          {/* ── Info ── */}
+          {/* Info */}
           <div>
-            {/* Certifications */}
+            {/* Certs */}
             <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginBottom: '12px' }}>
               {product.certifications?.map(cert => (
                 <span key={cert} style={{ background: '#D1FAE5', color: '#065F46', padding: '3px 10px', borderRadius: '4px', fontSize: '0.75rem', fontWeight: 700 }}>{cert}</span>
               ))}
             </div>
 
-            <h1 style={{ fontSize: 'clamp(1.4rem,3vw,1.9rem)', marginBottom: '10px', lineHeight: 1.2 }}>{product.name}</h1>
+            <h1 style={{ fontSize: 'clamp(1.4rem, 3vw, 1.9rem)', marginBottom: '10px', lineHeight: 1.2 }}>{product.name}</h1>
 
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px', flexWrap: 'wrap' }}>
               <StarRating rating={Math.round(product.rating)}/>
               <span style={{ color: '#6B7280', fontSize: '0.85rem' }}>({product.numReviews} reviews)</span>
-              <span style={{ fontSize: '0.82rem', fontWeight: 700, color: product.stock > 0 ? '#16A34A' : '#DC2626', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                {product.stock > 0 ? <CheckCircle2 size={13}/> : <XCircle size={13}/>}
-                {product.stock > 0 ? `In Stock (${product.stock})` : 'Out of Stock'}
+              <span style={{ fontSize: '0.82rem', fontWeight: 700, color: product.stock > 0 ? '#16A34A' : '#DC2626' }}>
+                {product.stock > 0 ? `✓ In Stock (${product.stock})` : '✕ Out of Stock'}
               </span>
             </div>
 
@@ -230,11 +225,11 @@ const ProductDetail = () => {
             {/* Qty + Buttons */}
             <div style={{ display: 'flex', gap: '10px', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap' }}>
               <div style={{ display: 'flex', alignItems: 'center', border: '1.5px solid #E5E7EB', borderRadius: '10px', overflow: 'hidden' }}>
-                <button onClick={() => setQty(Math.max(1, qty-1))} style={{ width: '40px', height: '44px', border: 'none', background: '#F9FAFB', cursor: 'pointer', fontSize: '1.1rem', color: '#374151' }}>−</button>
-                <span style={{ padding: '0 18px', fontWeight: 700, fontSize: '1rem' }}>{qty}</span>
-                <button onClick={() => setQty(Math.min(product.stock, qty+1))} style={{ width: '40px', height: '44px', border: 'none', background: '#F9FAFB', cursor: 'pointer', fontSize: '1.1rem', color: '#374151' }}>+</button>
+                <button onClick={() => setQty(Math.max(1, qty - 1))} style={{ width: '40px', height: '44px', border: 'none', background: '#F9FAFB', cursor: 'pointer', fontSize: '1.1rem' }}>−</button>
+                <span style={{ padding: '0 18px', fontWeight: 700 }}>{qty}</span>
+                <button onClick={() => setQty(Math.min(product.stock, qty + 1))} style={{ width: '40px', height: '44px', border: 'none', background: '#F9FAFB', cursor: 'pointer', fontSize: '1.1rem' }}>+</button>
               </div>
-              <button onClick={() => { dispatch(addToCart({ product, quantity: qty })); }}
+              <button onClick={() => dispatch(addToCart({ product, quantity: qty }))}
                 disabled={product.stock === 0}
                 style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '7px', padding: '12px', background: '#2D6A4F', color: 'white', border: 'none', borderRadius: '10px', fontWeight: 700, fontSize: '0.92rem', cursor: product.stock === 0 ? 'not-allowed' : 'pointer', fontFamily: 'Inter,sans-serif', opacity: product.stock === 0 ? 0.5 : 1 }}>
                 <ShoppingCart size={15}/> Add to Cart
@@ -246,7 +241,7 @@ const ProductDetail = () => {
               </button>
             </div>
 
-            {/* ── DELIVERY CHECKER — real time ── */}
+            {/* ── DELIVERY CHECKER ── */}
             <DeliveryChecker
               productId={product._id}
               isNationwide={product.isNationwide}
@@ -256,12 +251,12 @@ const ProductDetail = () => {
           </div>
         </div>
 
-        {/* ── Tabs ── */}
+        {/* Tabs */}
         <div style={{ marginTop: '48px' }}>
           <div style={{ display: 'flex', gap: '4px', borderBottom: '2px solid #E5E7EB', marginBottom: '28px' }}>
             {[['desc','Description'],['ingredients','Ingredients'],['reviews',`Reviews (${product.numReviews})`]].map(([t, label]) => (
               <button key={t} onClick={() => setTab(t)}
-                style={{ padding: '12px 20px', border: 'none', background: 'none', cursor: 'pointer', fontWeight: tab===t ? 700 : 500, color: tab===t ? '#2D6A4F' : '#6B7280', borderBottom: tab===t ? '2px solid #2D6A4F' : '2px solid transparent', marginBottom: '-2px', fontSize: '0.92rem', fontFamily: 'Inter,sans-serif' }}>
+                style={{ padding: '12px 20px', border: 'none', background: 'none', cursor: 'pointer', fontWeight: tab === t ? 700 : 500, color: tab === t ? '#2D6A4F' : '#6B7280', borderBottom: tab === t ? '2px solid #2D6A4F' : '2px solid transparent', marginBottom: '-2px', fontSize: '0.92rem', fontFamily: 'Inter,sans-serif' }}>
                 {label}
               </button>
             ))}
@@ -284,7 +279,7 @@ const ProductDetail = () => {
                 <div key={r._id} style={{ background: 'white', borderRadius: '12px', padding: '18px', marginBottom: '12px', boxShadow: '0 2px 6px rgba(0,0,0,0.05)', border: '1px solid #F3F4F6' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '10px' }}>
                     <div style={{ width: '38px', height: '38px', borderRadius: '50%', background: '#2D6A4F', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '0.95rem', flexShrink: 0 }}>
-                      {r.name[0].toUpperCase()}
+                      {r.name?.[0]?.toUpperCase()}
                     </div>
                     <div>
                       <p style={{ fontWeight: 700, fontSize: '0.92rem', margin: 0 }}>{r.name}</p>
@@ -298,7 +293,6 @@ const ProductDetail = () => {
               ))}
               {product.reviews?.length === 0 && <p style={{ color: '#9CA3AF', marginBottom: '24px' }}>No reviews yet. Be the first!</p>}
 
-              {/* Add review form */}
               {isAuthenticated && (
                 <div style={{ background: 'white', borderRadius: '14px', padding: '24px', boxShadow: '0 2px 8px rgba(0,0,0,0.06)', marginTop: '20px', border: '1px solid #F3F4F6' }}>
                   <h3 style={{ fontFamily: 'Inter,sans-serif', fontWeight: 700, marginBottom: '16px', fontSize: '1rem' }}>Write a Review</h3>
