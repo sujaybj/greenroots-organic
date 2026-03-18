@@ -52,5 +52,10 @@ const orderSchema = new mongoose.Schema({
   cancelledAt: Date,
   cancelReason: String,
 }, { timestamps: true });
+trackingHistory: [{
+  status: String,
+  location: String,
+  timestamp: { type: Date, default: Date.now }
+}]
 
 module.exports = mongoose.model('Order', orderSchema);

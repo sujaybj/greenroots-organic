@@ -1,129 +1,225 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
-import AdminLayout from './AdminLayout';
+import { useDispatch } from 'react-redux';
+import {
+  LayoutDashboard, Package, ShoppingCart, Users,
+  Store, LogOut, Menu, X, Leaf,
+  TrendingUp, AlertTriangle,
+} from 'lucide-react';
+import { logoutUser } from '../../redux/slices/authSlice';
 import API from '../../utils/api';
 import Loader from '../../components/common/Loader';
 
-const StatCard = ({ icon, label, value, color, sub }) => (
-  <div style={{ background: 'white', borderRadius: '16px', padding: '22px', boxShadow: '0 2px 8px rgba(0,0,0,0.06)', borderLeft: `4px solid ${color}` }}>
+const NAV_ITEMS = [
+  { path: '/admin',          Icon: LayoutDashboard, label: 'Dashboard'  },
+  { path: '/admin/products', Icon: Package,         label: 'Products'   },
+  { path: '/admin/orders',   Icon: ShoppingCart,    label: 'Orders'     },
+  { path: '/admin/users',    Icon: Users,           label: 'Users'      },
+  { path: '/',               Icon: Store,           label: 'View Store' },
+];
+
+const STATUS_COLORS = {
+  placed:         '#F59E0B',
+  confirmed:      '#3B82F6',
+  packed:         '#8B5CF6',
+  shipped:        '#06B6D4',
+  outForDelivery: '#F97316',
+  delivered:      '#22C55E',
+  cancelled:      '#EF4444',
+};
+
+const StatCard = ({ Icon, label, value, color, sub }) => (
+  <div style={{ background: 'white', borderRadius: '14px', padding: '20px', boxShadow: '0 2px 8px rgba(0,0,0,0.05)', borderLeft: `4px solid ${color}`, border: `1px solid #F3F4F6`, borderLeftColor: color }}>
     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
       <div>
-        <p style={{ color: '#6B7280', fontSize: '0.82rem', marginBottom: '8px' }}>{label}</p>
-        <p style={{ fontSize: '1.9rem', fontWeight: 800, color: '#1B1B1B', lineHeight: 1 }}>{value}</p>
-        {sub && <p style={{ fontSize: '0.75rem', color: '#22C55E', marginTop: '6px' }}>{sub}</p>}
+        <p style={{ color: '#9CA3AF', fontSize: '0.78rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', margin: 0 }}>{label}</p>
+        <p style={{ fontSize: 'clamp(1.4rem,3vw,1.9rem)', fontWeight: 800, color: '#1B1B1B', fontFamily: 'Inter,sans-serif', margin: '6px 0 0' }}>{value}</p>
+        {sub && <p style={{ fontSize: '0.75rem', color: '#22C55E', margin: '4px 0 0', fontWeight: 600 }}>{sub}</p>}
       </div>
-      <span style={{ fontSize: '2rem' }}>{icon}</span>
+      <div style={{ background: `${color}18`, borderRadius: '10px', padding: '10px' }}>
+        <Icon size={20} color={color}/>
+      </div>
     </div>
   </div>
 );
 
 const AdminDashboard = () => {
-  const [stats, setStats] = useState(null);
+  const dispatch  = useDispatch();
+  const navigate  = useNavigate();
+  const location  = useLocation();
+  const [stats,   setStats]   = useState(null);
   const [loading, setLoading] = useState(true);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   useEffect(() => {
-    API.get('/admin/dashboard').then(({ data }) => setStats(data)).catch(() => {}).finally(() => setLoading(false));
+    API.get('/admin/dashboard')
+      .then(({ data }) => setStats(data))
+      .catch(() => {})
+      .finally(() => setLoading(false));
   }, []);
 
-  return (
-    <AdminLayout>
-      <Helmet><title>Admin Dashboard - GreenRoots</title></Helmet>
+  const handleLogout = () => { dispatch(logoutUser()); navigate('/'); };
 
-      <div style={{ marginBottom: '28px' }}>
-        <h1 style={{ fontSize: '1.6rem', fontWeight: 700 }}>Dashboard Overview</h1>
-        <p style={{ color: '#6B7280', marginTop: '4px', fontSize: '0.9rem' }}>Welcome back! Here's what's happening with your store.</p>
+  const Sidebar = ({ mobile = false }) => (
+    <div style={{
+      width: mobile ? '100%' : '220px',
+      background: '#1B4332',
+      color: 'white',
+      display: 'flex',
+      flexDirection: 'column',
+      flexShrink: 0,
+      ...(mobile ? {} : { position: 'sticky', top: 0, height: '100vh', overflowY: 'auto' }),
+    }}>
+      {/* Brand */}
+      <div style={{ padding: '20px', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <div style={{ background: 'rgba(116,198,157,0.2)', borderRadius: '8px', padding: '6px' }}>
+              <Leaf size={16} color="#74C69D"/>
+            </div>
+            <div>
+              <p style={{ fontFamily: 'Playfair Display,serif', fontWeight: 700, fontSize: '1rem', margin: 0 }}>GreenRoots</p>
+              <p style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.45)', margin: 0 }}>Admin Panel</p>
+            </div>
+          </div>
+          {mobile && (
+            <button onClick={() => setSidebarOpen(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.6)', padding: '4px' }}>
+              <X size={18}/>
+            </button>
+          )}
+        </div>
       </div>
 
-      {loading ? <Loader /> : stats ? (
-        <>
-          {/* Stats Cards */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '20px', marginBottom: '32px' }}>
-            <StatCard icon="💰" label="Total Revenue" value={`₹${(stats.stats?.totalRevenue || 0).toLocaleString('en-IN')}`} color="#22C55E" />
-            <StatCard icon="🛒" label="Total Orders" value={stats.stats?.totalOrders || 0} color="#3B82F6" />
-            <StatCard icon="👥" label="Total Users" value={stats.stats?.totalUsers || 0} color="#8B5CF6" />
-            <StatCard icon="📦" label="Products" value={stats.stats?.totalProducts || 0} color="#F59E0B" />
+      {/* Nav */}
+      <nav style={{ flex: 1, padding: '12px 0' }}>
+        {NAV_ITEMS.map(({ path, Icon, label }) => {
+          const active = location.pathname === path;
+          return (
+            <Link key={label} to={path} onClick={() => setSidebarOpen(false)}
+              style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '11px 20px', color: active ? '#74C69D' : 'rgba(255,255,255,0.7)', textDecoration: 'none', fontSize: '0.88rem', fontWeight: active ? 700 : 400, background: active ? 'rgba(116,198,157,0.12)' : 'transparent', borderLeft: active ? '3px solid #74C69D' : '3px solid transparent', transition: 'all 0.15s' }}>
+              <Icon size={15}/> {label}
+            </Link>
+          );
+        })}
+      </nav>
+
+      {/* Logout */}
+      <button onClick={handleLogout}
+        style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '14px 20px', color: 'rgba(255,120,120,0.85)', background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.88rem', borderTop: '1px solid rgba(255,255,255,0.08)', width: '100%' }}>
+        <LogOut size={15}/> Logout
+      </button>
+    </div>
+  );
+
+  return (
+    <>
+      <Helmet><title>Admin Dashboard — GreenRoots</title></Helmet>
+      <div style={{ minHeight: '100vh', background: '#F8FFF4', display: 'flex' }}>
+
+        {/* Desktop sidebar */}
+        <div className="admin-sidebar-desktop">
+          <Sidebar/>
+        </div>
+
+        {/* Mobile sidebar overlay */}
+        {sidebarOpen && (
+          <div style={{ position: 'fixed', inset: 0, zIndex: 1000, display: 'flex' }}>
+            <div style={{ width: '260px', flexShrink: 0 }}>
+              <Sidebar mobile/>
+            </div>
+            <div onClick={() => setSidebarOpen(false)} style={{ flex: 1, background: 'rgba(0,0,0,0.4)' }}/>
+          </div>
+        )}
+
+        {/* Main content */}
+        <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
+          {/* Mobile topbar */}
+          <div className="admin-topbar-mobile" style={{ background: '#1B4332', padding: '14px 18px', display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <button onClick={() => setSidebarOpen(true)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'white', display: 'flex', padding: '2px' }}>
+              <Menu size={20}/>
+            </button>
+            <span style={{ fontFamily: 'Playfair Display,serif', color: 'white', fontWeight: 700, fontSize: '1rem' }}>GreenRoots Admin</span>
           </div>
 
-          {/* Recent Orders */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 320px', gap: '24px', alignItems: 'start' }}>
-            <div style={{ background: 'white', borderRadius: '16px', padding: '24px', boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-                <h3 style={{ fontWeight: 700, fontSize: '1rem' }}>Recent Orders</h3>
-                <Link to="/admin/orders" style={{ color: '#2D6A4F', fontSize: '0.88rem', fontWeight: 600, textDecoration: 'none' }}>View All →</Link>
-              </div>
-              {stats.recentOrders?.length > 0 ? (
-                <div style={{ overflowX: 'auto' }}>
-                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.88rem' }}>
+          <div style={{ flex: 1, padding: 'clamp(16px,3vw,32px)', overflowY: 'auto' }}>
+            <h1 style={{ fontSize: 'clamp(1.2rem,3vw,1.7rem)', marginBottom: '4px' }}>Dashboard</h1>
+            <p style={{ color: '#9CA3AF', marginBottom: '24px', fontSize: '0.85rem' }}>Welcome back, Admin</p>
+
+            {loading ? <Loader/> : stats && (
+              <>
+                {/* Stat cards */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(180px,1fr))', gap: '14px', marginBottom: '24px' }}>
+                  <StatCard Icon={TrendingUp} label="Revenue"  value={`₹${stats.stats.totalRevenue?.toLocaleString('en-IN')}`} color="#22C55E"/>
+                  <StatCard Icon={ShoppingCart} label="Orders"  value={stats.stats.totalOrders}    color="#3B82F6"/>
+                  <StatCard Icon={Users}        label="Users"   value={stats.stats.totalUsers}     color="#8B5CF6"/>
+                  <StatCard Icon={Package}      label="Products" value={stats.stats.totalProducts}  color="#F59E0B"/>
+                </div>
+
+                {/* Recent orders */}
+                <div style={{ background: 'white', borderRadius: '14px', padding: 'clamp(16px,3vw,24px)', boxShadow: '0 2px 8px rgba(0,0,0,0.05)', marginBottom: '18px', border: '1px solid #F3F4F6', overflowX: 'auto' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '8px' }}>
+                    <h3 style={{ fontFamily: 'Inter,sans-serif', fontWeight: 700, fontSize: '0.95rem', margin: 0 }}>Recent Orders</h3>
+                    <Link to="/admin/orders" style={{ color: '#2D6A4F', fontSize: '0.83rem', fontWeight: 700, textDecoration: 'none' }}>View All →</Link>
+                  </div>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem', minWidth: '400px' }}>
                     <thead>
-                      <tr>
-                        {['Order', 'Customer', 'Amount', 'Status'].map(h => (
-                          <th key={h} style={{ textAlign: 'left', padding: '8px 12px', color: '#9CA3AF', fontWeight: 600, borderBottom: '1px solid #F3F4F6', fontSize: '0.78rem' }}>{h}</th>
+                      <tr style={{ borderBottom: '2px solid #F3F4F6' }}>
+                        {['Order ID', 'Customer', 'Amount', 'Status'].map(h => (
+                          <th key={h} style={{ textAlign: 'left', padding: '8px 10px', color: '#9CA3AF', fontWeight: 700, fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.04em' }}>{h}</th>
                         ))}
                       </tr>
                     </thead>
                     <tbody>
-                      {stats.recentOrders.map(order => (
+                      {stats.recentOrders?.map(order => (
                         <tr key={order._id} style={{ borderBottom: '1px solid #F9FAFB' }}>
-                          <td style={{ padding: '12px', fontFamily: 'monospace', fontWeight: 700, color: '#2D6A4F', fontSize: '0.82rem' }}>#{order._id.slice(-8).toUpperCase()}</td>
-                          <td style={{ padding: '12px', fontWeight: 500 }}>{order.user?.name}</td>
-                          <td style={{ padding: '12px', fontWeight: 700 }}>₹{order.totalAmount}</td>
-                          <td style={{ padding: '12px' }}>
-                            <span style={{ background: '#D1FAE5', color: '#065F46', padding: '3px 10px', borderRadius: '100px', fontSize: '0.75rem', fontWeight: 600, textTransform: 'capitalize' }}>{order.orderStatus}</span>
+                          <td style={{ padding: '10px' }}>
+                            <Link to={`/admin/orders/${order._id}`} style={{ fontFamily: 'monospace', fontWeight: 700, color: '#2D6A4F', textDecoration: 'none', fontSize: '0.83rem' }}>
+                              #{order._id.slice(-8).toUpperCase()}
+                            </Link>
+                          </td>
+                          <td style={{ padding: '10px', color: '#374151' }}>{order.user?.name}</td>
+                          <td style={{ padding: '10px', fontWeight: 700, color: '#2D6A4F' }}>₹{order.totalAmount}</td>
+                          <td style={{ padding: '10px' }}>
+                            <span style={{ background: `${STATUS_COLORS[order.orderStatus] || '#9CA3AF'}18`, color: STATUS_COLORS[order.orderStatus] || '#9CA3AF', padding: '3px 8px', borderRadius: '100px', fontSize: '0.72rem', fontWeight: 700, textTransform: 'capitalize' }}>
+                              {order.orderStatus === 'outForDelivery' ? 'Out for Delivery' : order.orderStatus}
+                            </span>
                           </td>
                         </tr>
                       ))}
                     </tbody>
                   </table>
                 </div>
-              ) : (
-                <div style={{ textAlign: 'center', padding: '32px', color: '#9CA3AF' }}>
-                  <p>No orders yet</p>
-                  <Link to="/products" style={{ color: '#2D6A4F', marginTop: '8px', display: 'inline-block', fontWeight: 600 }}>View Store →</Link>
-                </div>
-              )}
-            </div>
 
-            {/* Low Stock & Quick Actions */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-              {/* Quick Actions */}
-              <div style={{ background: 'white', borderRadius: '16px', padding: '20px', boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}>
-                <h3 style={{ fontWeight: 700, fontSize: '1rem', marginBottom: '14px' }}>Quick Actions</h3>
-                {[
-                  { to: '/admin/products', icon: '➕', label: 'Add New Product', color: '#2D6A4F' },
-                  { to: '/admin/orders', icon: '🛒', label: 'View All Orders', color: '#3B82F6' },
-                  { to: '/admin/users', icon: '👥', label: 'Manage Users', color: '#8B5CF6' },
-                ].map(action => (
-                  <Link key={action.to} to={action.to} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 12px', borderRadius: '8px', textDecoration: 'none', color: '#374151', fontWeight: 500, fontSize: '0.9rem', marginBottom: '6px', transition: 'background 0.15s' }}
-                    onMouseOver={e => e.currentTarget.style.background = '#F3F4F6'}
-                    onMouseOut={e => e.currentTarget.style.background = 'transparent'}>
-                    <span style={{ width: '32px', height: '32px', background: `${action.color}15`, borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1rem' }}>{action.icon}</span>
-                    {action.label}
-                  </Link>
-                ))}
-              </div>
-
-              {/* Low Stock Alert */}
-              {stats.lowStockProducts?.length > 0 && (
-                <div style={{ background: '#FFFBEB', border: '1px solid #FCD34D', borderRadius: '16px', padding: '20px' }}>
-                  <h3 style={{ fontWeight: 700, color: '#92400E', marginBottom: '12px', fontSize: '0.95rem' }}>⚠️ Low Stock</h3>
-                  {stats.lowStockProducts.map(p => (
-                    <div key={p._id} style={{ display: 'flex', justifyContent: 'space-between', padding: '7px 0', borderBottom: '1px solid #FDE68A', fontSize: '0.85rem' }}>
-                      <span style={{ color: '#374151' }}>{p.name}</span>
-                      <span style={{ fontWeight: 700, color: p.stock <= 5 ? '#EF4444' : '#F59E0B' }}>{p.stock} left</span>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
+                {/* Low stock */}
+                {stats.lowStockProducts?.length > 0 && (
+                  <div style={{ background: '#FFFBEB', border: '1px solid #FCD34D', borderRadius: '14px', padding: 'clamp(14px,3vw,20px)' }}>
+                    <h3 style={{ fontFamily: 'Inter,sans-serif', fontWeight: 700, color: '#92400E', marginBottom: '12px', fontSize: '0.92rem', display: 'flex', alignItems: 'center', gap: '7px' }}>
+                      <AlertTriangle size={15} color="#D97706"/> Low Stock Alert
+                    </h3>
+                    {stats.lowStockProducts.map(p => (
+                      <div key={p._id} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid #FDE68A', fontSize: '0.85rem' }}>
+                        <span style={{ color: '#374151' }}>{p.name}</span>
+                        <span style={{ fontWeight: 700, color: p.stock <= 5 ? '#DC2626' : '#F59E0B' }}>{p.stock} left</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </>
+            )}
           </div>
-        </>
-      ) : (
-        <div style={{ textAlign: 'center', padding: '60px', color: '#9CA3AF' }}>
-          <p>Could not load dashboard data. Is the server running?</p>
         </div>
-      )}
-    </AdminLayout>
+      </div>
+
+      <style>{`
+        .admin-sidebar-desktop { display: block; }
+        .admin-topbar-mobile { display: none; }
+        @media (max-width: 768px) {
+          .admin-sidebar-desktop { display: none !important; }
+          .admin-topbar-mobile { display: flex !important; }
+        }
+      `}</style>
+    </>
   );
 };
 
