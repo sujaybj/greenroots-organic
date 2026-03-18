@@ -3,11 +3,50 @@ import { Link } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { motion } from 'framer-motion';
 import { Helmet } from 'react-helmet-async';
+import {
+  Leaf, Truck, ShieldCheck, RotateCcw, Star,
+  ShoppingBag, ArrowRight, CheckCircle2, Sparkles,
+  FlaskConical, Snowflake, Recycle,
+  Cherry, Milk, Wheat, Bean, Flame, Droplets, Coffee, Heart
+} from 'lucide-react';
 import { fetchProducts, fetchCategories } from '../redux/slices/productSlice';
 import ProductCard from '../components/product/ProductCard';
 import Loader from '../components/common/Loader';
 
-const CATEGORY_ICONS = { Vegetables: '🥦', Fruits: '🍎', Dairy: '🥛', Grains: '🌾', Pulses: '🫘', Spices: '🌶️', Oils: '🫙', Beverages: '🍵', Skincare: '🌹', Other: '🌿' };
+const CATEGORY_ICONS = {
+  Vegetables: Leaf,
+  Fruits: Cherry,
+  Dairy: Milk,
+  Grains: Wheat,
+  Pulses: Bean,
+  Spices: Flame,
+  Oils: Droplets,
+  Beverages: Coffee,
+  Skincare: Heart,
+  Other: Sparkles,
+};
+
+const CATEGORY_COLORS = {
+  Vegetables: '#16A34A',
+  Fruits: '#EA580C',
+  Dairy: '#2563EB',
+  Grains: '#CA8A04',
+  Pulses: '#9333EA',
+  Spices: '#DC2626',
+  Oils: '#0891B2',
+  Beverages: '#65A30D',
+  Skincare: '#EC4899',
+  Other: '#6B7280',
+};
+
+const fadeUp = {
+  hidden: { opacity: 0, y: 30 },
+  visible: (i = 0) => ({
+    opacity: 1,
+    y: 0,
+    transition: { duration: 0.5, delay: i * 0.1 },
+  }),
+};
 
 const Home = () => {
   const dispatch = useDispatch();
@@ -23,6 +62,21 @@ const Home = () => {
     setFeaturedProducts(products);
   }, [products]);
 
+  const trustBadges = [
+    { icon: ShieldCheck, label: 'Certified Organic', sub: '100% verified' },
+    { icon: Truck, label: 'Free Delivery', sub: 'Orders ₹500+' },
+    { icon: ShieldCheck, label: 'Secure Payments', sub: 'SSL encrypted' },
+    { icon: RotateCcw, label: 'Easy Returns', sub: '7-day policy' },
+    { icon: Star, label: 'Top Rated', sub: '4.8/5 stars' },
+  ];
+
+  const whyCards = [
+    { icon: Leaf, title: 'Farm to Table', desc: 'Direct sourcing from 200+ certified organic farms across India.', color: '#16A34A' },
+    { icon: FlaskConical, title: 'Lab Tested', desc: 'Every product tested for pesticide residues and quality assurance.', color: '#2563EB' },
+    { icon: Snowflake, title: 'Cold Chain', desc: 'Temperature-controlled logistics for maximum freshness.', color: '#0891B2' },
+    { icon: Recycle, title: 'Eco Packaging', desc: 'Biodegradable and compostable packaging for a greener planet.', color: '#65A30D' },
+  ];
+
   return (
     <>
       <Helmet>
@@ -31,85 +85,129 @@ const Home = () => {
       </Helmet>
 
       {/* ─── Hero Section ─── */}
-      <section style={{ background: 'linear-gradient(135deg, #1B4332 0%, #2D6A4F 60%, #40916C 100%)', padding: '80px 0', overflow: 'hidden', position: 'relative' }}>
-        <div className="container" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '40px', alignItems: 'center' }}>
-          <motion.div initial={{ x: -60, opacity: 0 }} animate={{ x: 0, opacity: 1 }} transition={{ duration: 0.7 }}>
-            <span style={{ background: 'rgba(116,198,157,0.3)', color: '#74C69D', padding: '6px 16px', borderRadius: '100px', fontSize: '0.85rem', fontWeight: 600 }}>🌿 GreenRoots Organics</span>
-            <h1 style={{ color: 'white', fontSize: 'clamp(2rem, 4vw, 3.2rem)', marginTop: '16px', lineHeight: 1.2, fontFamily: 'Playfair Display, serif' }}>
+      <section className="home-hero">
+        <div className="container home-hero__inner">
+          <motion.div
+            className="home-hero__content"
+            initial={{ opacity: 0, x: -40 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.6 }}
+          >
+            <span className="home-hero__badge">
+              <Leaf size={14} />
+              GreenRoots Organics
+            </span>
+            <h1 className="home-hero__title">
               Nature's Best,<br />Delivered Fresh
             </h1>
-            <p style={{ color: 'rgba(255,255,255,0.8)', fontSize: '1.05rem', marginTop: '16px', lineHeight: 1.8, maxWidth: '420px' }}>
+            <p className="home-hero__subtitle">
               From certified organic farms to your table. No pesticides, no chemicals — just pure goodness your family deserves.
             </p>
-            <div style={{ display: 'flex', gap: '12px', marginTop: '32px', flexWrap: 'wrap' }}>
-              <Link to="/products" className="btn" style={{ background: '#74C69D', color: '#1B4332', fontWeight: 700, padding: '14px 28px' }}>Shop Now 🛒</Link>
-              <Link to="/about" className="btn btn-outline" style={{ color: 'white', borderColor: 'rgba(255,255,255,0.5)' }}>Our Story</Link>
+            <div className="home-hero__actions">
+              <Link to="/products" className="btn btn-primary btn-lg home-hero__cta">
+                <ShoppingBag size={18} />
+                Shop Now
+              </Link>
+              <Link to="/about" className="btn btn-outline btn-lg home-hero__cta-outline">
+                Our Story
+                <ArrowRight size={16} />
+              </Link>
             </div>
-            <div style={{ display: 'flex', gap: '32px', marginTop: '32px' }}>
-              {[['500+', 'Products'], ['50K+', 'Happy Customers'], ['4.8★', 'Rating']].map(([num, label]) => (
-                <div key={label}>
-                  <div style={{ color: '#74C69D', fontWeight: 700, fontSize: '1.4rem', fontFamily: 'Playfair Display, serif' }}>{num}</div>
-                  <div style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.8rem', marginTop: '2px' }}>{label}</div>
+            <div className="home-hero__stats">
+              {[['500+', 'Products'], ['50K+', 'Happy Customers'], ['4.8', 'Avg Rating']].map(([num, label]) => (
+                <div key={label} className="home-hero__stat">
+                  <span className="home-hero__stat-num">{num}</span>
+                  <span className="home-hero__stat-label">{label}</span>
                 </div>
               ))}
             </div>
           </motion.div>
-          <motion.div initial={{ x: 60, opacity: 0 }} animate={{ x: 0, opacity: 1 }} transition={{ duration: 0.7, delay: 0.2 }}
-            style={{ display: 'flex', justifyContent: 'center', fontSize: '180px', lineHeight: 1 }}>
-            🥬
+          <motion.div
+            className="home-hero__image"
+            initial={{ opacity: 0, x: 40 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.6, delay: 0.2 }}
+          >
+            <img src="/images/hero-banner.png" alt="Fresh organic produce" />
           </motion.div>
         </div>
       </section>
 
       {/* ─── Trust Badges ─── */}
-      <section style={{ background: 'white', padding: '20px 0', borderBottom: '1px solid #E5E7EB' }}>
-        <div className="container" style={{ display: 'flex', justifyContent: 'center', flexWrap: 'wrap', gap: '32px' }}>
-          {[['🌿', 'Certified Organic'], ['🚚', 'Free Delivery ₹500+'], ['🔒', 'Secure Payments'], ['↩️', '7-Day Returns'], ['⭐', '4.8/5 Rating']].map(([icon, text]) => (
-            <div key={text} style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.9rem', fontWeight: 500, color: '#374151' }}>
-              <span style={{ fontSize: '1.2rem' }}>{icon}</span>{text}
-            </div>
-          ))}
-        </div>
-      </section>
-
-      {/* ─── Categories ─── */}
-      <section style={{ padding: '64px 0' }}>
+      <section className="home-trust">
         <div className="container">
-          <div style={{ textAlign: 'center', marginBottom: '40px' }}>
-            <h2 style={{ fontSize: 'clamp(1.6rem, 3vw, 2.2rem)', color: '#1B1B1B' }}>Shop by Category</h2>
-            <p style={{ color: '#6B7280', marginTop: '8px' }}>Explore our wide range of organic products</p>
-          </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))', gap: '16px' }}>
-            {categories.map(cat => (
-              <motion.div key={cat._id} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                <Link to={`/products?category=${cat._id}`} style={{ textDecoration: 'none', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px', padding: '20px 12px', background: 'white', borderRadius: '12px', boxShadow: '0 2px 8px rgba(0,0,0,0.06)', border: '1px solid #F3F4F6', transition: 'all 0.2s' }}
-                  onMouseOver={e => e.currentTarget.style.borderColor = '#2D6A4F'}
-                  onMouseOut={e => e.currentTarget.style.borderColor = '#F3F4F6'}>
-                  <span style={{ fontSize: '2rem' }}>{CATEGORY_ICONS[cat._id] || '🌿'}</span>
-                  <span style={{ fontSize: '0.85rem', fontWeight: 600, color: '#374151', textAlign: 'center' }}>{cat._id}</span>
-                  <span style={{ fontSize: '0.75rem', color: '#9CA3AF' }}>{cat.count} items</span>
-                </Link>
-              </motion.div>
+          <div className="home-trust__grid trust-badges">
+            {trustBadges.map(({ icon: Icon, label, sub }) => (
+              <div key={label} className="home-trust__item">
+                <div className="home-trust__icon-wrap">
+                  <Icon size={20} strokeWidth={2} />
+                </div>
+                <div>
+                  <div className="home-trust__label">{label}</div>
+                  <div className="home-trust__sub">{sub}</div>
+                </div>
+              </div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* ─── Featured Products ─── */}
-      <section style={{ padding: '48px 0', background: 'white' }}>
+      {/* ─── Categories ─── */}
+      <section className="home-categories section-lg">
         <div className="container">
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px', flexWrap: 'wrap', gap: '12px' }}>
+          <div className="home-section-header">
             <div>
-              <h2 style={{ fontSize: 'clamp(1.6rem, 3vw, 2.2rem)' }}>Featured Products</h2>
-              <p style={{ color: '#6B7280', marginTop: '4px' }}>Hand-picked organic goodness</p>
+              <h2 className="home-section-title">Shop by Category</h2>
+              <p className="home-section-subtitle">Explore our wide range of organic products</p>
             </div>
-            <Link to="/products" className="btn btn-outline" style={{ padding: '10px 20px' }}>View All →</Link>
+            <Link to="/products" className="btn btn-outline btn-sm home-section-link">
+              View All <ArrowRight size={14} />
+            </Link>
+          </div>
+          <div className="home-categories__grid">
+            {categories.map((cat, i) => {
+              const Icon = CATEGORY_ICONS[cat._id] || Sparkles;
+              const color = CATEGORY_COLORS[cat._id] || '#6B7280';
+              return (
+                <motion.div
+                  key={cat._id}
+                  variants={fadeUp}
+                  initial="hidden"
+                  whileInView="visible"
+                  viewport={{ once: true }}
+                  custom={i}
+                >
+                  <Link to={`/products?category=${cat._id}`} className="home-category-card">
+                    <div className="home-category-card__icon" style={{ background: `${color}12`, color }}>
+                      <Icon size={28} strokeWidth={1.8} />
+                    </div>
+                    <span className="home-category-card__name">{cat._id}</span>
+                    <span className="home-category-card__count">{cat.count} items</span>
+                  </Link>
+                </motion.div>
+              );
+            })}
+          </div>
+        </div>
+      </section>
+
+      {/* ─── Featured Products ─── */}
+      <section className="home-featured section-md" style={{ background: 'white' }}>
+        <div className="container">
+          <div className="home-section-header">
+            <div>
+              <h2 className="home-section-title">Featured Products</h2>
+              <p className="home-section-subtitle">Hand-picked organic goodness</p>
+            </div>
+            <Link to="/products" className="btn btn-outline btn-sm home-section-link">
+              View All <ArrowRight size={14} />
+            </Link>
           </div>
 
           {loading ? (
             <div style={{ display: 'flex', justifyContent: 'center', padding: '40px' }}><Loader /></div>
           ) : (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '20px' }}>
+            <div className="product-grid">
               {featuredProducts.map(product => <ProductCard key={product._id} product={product} />)}
             </div>
           )}
@@ -117,34 +215,67 @@ const Home = () => {
       </section>
 
       {/* ─── Why Choose Us ─── */}
-      <section style={{ padding: '64px 0' }}>
+      <section className="home-why section-lg">
         <div className="container">
-          <h2 style={{ textAlign: 'center', fontSize: 'clamp(1.6rem, 3vw, 2.2rem)', marginBottom: '48px' }}>Why GreenRoots?</h2>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '24px' }}>
-            {[
-              { icon: '🌱', title: 'Farm to Table', desc: 'Direct sourcing from 200+ certified organic farms across India' },
-              { icon: '🔬', title: 'Lab Tested', desc: 'Every product tested for pesticide residues and quality assurance' },
-              { icon: '❄️', title: 'Cold Chain', desc: 'Temperature controlled logistics for freshness preservation' },
-              { icon: '♻️', title: 'Eco Packaging', desc: 'Biodegradable and compostable packaging for a greener planet' },
-            ].map(item => (
-              <motion.div key={item.title} whileHover={{ y: -6 }}
-                style={{ background: 'white', borderRadius: '16px', padding: '28px', boxShadow: '0 2px 12px rgba(0,0,0,0.06)', textAlign: 'center' }}>
-                <div style={{ fontSize: '2.5rem', marginBottom: '16px' }}>{item.icon}</div>
-                <h3 style={{ fontSize: '1.1rem', fontFamily: 'Inter, sans-serif', fontWeight: 700, marginBottom: '8px' }}>{item.title}</h3>
-                <p style={{ color: '#6B7280', fontSize: '0.9rem', lineHeight: 1.7 }}>{item.desc}</p>
-              </motion.div>
-            ))}
+          <div className="home-section-header" style={{ justifyContent: 'center' }}>
+            <div style={{ textAlign: 'center' }}>
+              <h2 className="home-section-title">Why GreenRoots?</h2>
+              <p className="home-section-subtitle">We go the extra mile for quality you can trust</p>
+            </div>
+          </div>
+          <div className="home-why__grid">
+            {whyCards.map((item, i) => {
+              const Icon = item.icon;
+              return (
+                <motion.div
+                  key={item.title}
+                  className="home-why__card"
+                  variants={fadeUp}
+                  initial="hidden"
+                  whileInView="visible"
+                  viewport={{ once: true }}
+                  custom={i}
+                  whileHover={{ y: -6 }}
+                >
+                  <div className="home-why__card-icon" style={{ background: `${item.color}12`, color: item.color }}>
+                    <Icon size={28} strokeWidth={1.8} />
+                  </div>
+                  <h3 className="home-why__card-title">{item.title}</h3>
+                  <p className="home-why__card-desc">{item.desc}</p>
+                </motion.div>
+              );
+            })}
           </div>
         </div>
       </section>
 
-      {/* ─── CTA Banner ─── */}
-      <section style={{ background: 'linear-gradient(135deg, #2D6A4F, #1B4332)', padding: '60px 20px', textAlign: 'center' }}>
-        <motion.div initial={{ scale: 0.9, opacity: 0 }} whileInView={{ scale: 1, opacity: 1 }} viewport={{ once: true }}>
-          <h2 style={{ color: 'white', fontSize: 'clamp(1.6rem, 3vw, 2.4rem)', marginBottom: '12px' }}>Start Your Organic Journey Today</h2>
-          <p style={{ color: 'rgba(255,255,255,0.8)', marginBottom: '28px', fontSize: '1.05rem' }}>Get 10% off your first order. Use code: <strong style={{ color: '#74C69D' }}>ORGANIC10</strong></p>
-          <Link to="/register" className="btn" style={{ background: '#74C69D', color: '#1B4332', fontWeight: 700, padding: '14px 32px', fontSize: '1rem' }}>Create Free Account</Link>
-        </motion.div>
+      {/* ─── Promo Banner ─── */}
+      <section className="home-promo">
+        <div className="container">
+          <motion.div
+            className="home-promo__inner"
+            initial={{ opacity: 0, scale: 0.95 }}
+            whileInView={{ opacity: 1, scale: 1 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.5 }}
+          >
+            <div className="home-promo__content">
+              <div className="home-promo__badge">
+                <Sparkles size={14} />
+                Limited Time Offer
+              </div>
+              <h2 className="home-promo__title">Start Your Organic Journey Today</h2>
+              <p className="home-promo__text">
+                Get <strong>10% off</strong> your first order with code
+              </p>
+              <div className="home-promo__code">ORGANIC10</div>
+              <Link to="/register" className="btn btn-primary btn-lg home-promo__cta">
+                <CheckCircle2 size={18} />
+                Create Free Account
+              </Link>
+            </div>
+          </motion.div>
+        </div>
       </section>
     </>
   );
