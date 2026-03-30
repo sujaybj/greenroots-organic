@@ -9,12 +9,11 @@ const reviewSchema = new mongoose.Schema({
   comment: { type: String, required: true, maxlength: 500 },
 }, { timestamps: true });
 
-// ── Deliverable area schema ───────────────────────────────────
 const deliverableAreaSchema = new mongoose.Schema({
-  state:    { type: String, required: true },           // e.g. "Karnataka"
-  cities:   [{ type: String }],                         // e.g. ["Bangalore","Mysore"] — empty = all cities
-  pincodes: [{ type: String }],                         // specific pincodes if needed
-  note:     { type: String, maxlength: 200 },           // e.g. "Delivery in 3-5 days"
+  state:    { type: String, required: true },
+  cities:   [{ type: String }],
+  pincodes: [{ type: String }],
+  note:     { type: String, maxlength: 200 },
   isActive: { type: Boolean, default: true },
 }, { _id: false });
 
@@ -26,14 +25,17 @@ const productSchema = new mongoose.Schema({
   discountPrice:    { type: Number, min: 0 },
   category: {
     type: String, required: true,
-    enum: ['Vegetables', 'Fruits', 'Dairy', 'Grains', 'Pulses', 'Spices', 'Oils', 'Beverages', 'Skincare', 'Other'],
+    enum: [
+      'Vegetables', 'Fruits', 'Dairy', 'Grains', 'Pulses',
+      'Spices', 'Oils', 'Beverages', 'Skincare',
+      'Electronics',   // ← NEW
+      'Household',     // ← NEW
+      'Other',
+    ],
   },
-  images: [{
-    url:      { type: String, required: true },
-    publicId: { type: String },
-  }],
-  stock:          { type: Number, required: true, min: 0, default: 0 },
-  unit:           { type: String, default: 'kg', enum: ['kg', 'g', 'litre', 'ml', 'piece', 'pack', 'dozen'] },
+  images: [{ url: { type: String, required: true }, publicId: String }],
+  stock:    { type: Number, required: true, min: 0, default: 0 },
+  unit:     { type: String, default: 'piece', enum: ['kg', 'g', 'litre', 'ml', 'piece', 'pack', 'dozen'] },
   ingredients:    [String],
   certifications: [{ type: String, enum: ['USDA Organic', 'India Organic', 'FSSAI', 'Non-GMO', 'Fair Trade', 'Vegan'] }],
   nutritionInfo: {
@@ -41,13 +43,13 @@ const productSchema = new mongoose.Schema({
     fat: String, fiber: String, vitamins: String,
   },
 
-  // ── Delivery coverage ──────────────────────────────────────
-  deliverableAreas:   [deliverableAreaSchema],   // Empty = nationwide delivery
-  deliveryNote:       { type: String, maxlength: 300 },  // Global note e.g. "Remote areas 5-7 days"
-  isNationwide:       { type: Boolean, default: false }, // Admin sets true = all India
+  // ── Delivery ──────────────────────────────────────────────
+  deliverableAreas: [deliverableAreaSchema],
+  deliveryNote:     { type: String, maxlength: 300 },
+  isNationwide:     { type: Boolean, default: false },
 
   isFeatured: { type: Boolean, default: false },
-  isActive:   { type: Boolean, default: true },
+  isActive:   { type: Boolean, default: true  },
   reviews:    [reviewSchema],
   rating:     { type: Number, default: 0 },
   numReviews: { type: Number, default: 0 },
@@ -55,11 +57,17 @@ const productSchema = new mongoose.Schema({
   tags:       [String],
 }, { timestamps: true, toJSON: { virtuals: true } });
 
+// Indexes for performance
+productSchema.index({ category: 1, isActive: 1 });
+productSchema.index({ isFeatured: 1, isActive: 1 });
+productSchema.index({ name: 'text', description: 'text', tags: 'text' });
+productSchema.index({ price: 1 });
+productSchema.index({ rating: -1 });
+
 productSchema.methods.updateRating = function () {
   if (this.reviews.length === 0) { this.rating = 0; this.numReviews = 0; }
   else {
-    const avg = this.reviews.reduce((acc, r) => acc + r.rating, 0) / this.reviews.length;
-    this.rating = Math.round(avg * 10) / 10;
+    this.rating    = Math.round(this.reviews.reduce((a,r) => a+r.rating, 0) / this.reviews.length * 10) / 10;
     this.numReviews = this.reviews.length;
   }
 };
@@ -70,27 +78,13 @@ productSchema.virtual('discountPercent').get(function () {
   return 0;
 });
 
-// ── Check if a pincode/state is deliverable ───────────────────
 productSchema.methods.isDeliverableTo = function (pincode, state) {
-  // Nationwide covers everywhere
-  if (this.isNationwide || this.deliverableAreas.length === 0) return { deliverable: true, note: this.deliveryNote || '' };
-
+  if (this.isNationwide || this.deliverableAreas.length === 0)
+    return { deliverable: true, note: this.deliveryNote || '' };
   const active = this.deliverableAreas.filter(a => a.isActive);
-
-  // Check by pincode first (most specific)
-  if (pincode) {
-    for (const area of active) {
-      if (area.pincodes.includes(pincode)) return { deliverable: true, note: area.note || this.deliveryNote || '' };
-    }
-  }
-
-  // Check by state
-  if (state) {
-    const stateArea = active.find(a => a.state.toLowerCase() === state.toLowerCase());
-    if (stateArea) return { deliverable: true, note: stateArea.note || this.deliveryNote || '' };
-  }
-
-  return { deliverable: false, note: 'This product is not yet available in your area.' };
+  if (pincode) for (const a of active) if (a.pincodes.includes(pincode)) return { deliverable: true, note: a.note || this.deliveryNote || '' };
+  if (state)   { const sa = active.find(a => a.state.toLowerCase() === state.toLowerCase()); if (sa) return { deliverable: true, note: sa.note || this.deliveryNote || '' }; }
+  return { deliverable: false, note: 'Not available in your area yet.' };
 };
 
 module.exports = mongoose.model('Product', productSchema);
