@@ -1,20 +1,17 @@
-// ─── server/controllers/orderController.js ──────────────────
 const Order   = require('../models/Order');
 const Product = require('../models/Product');
-const Coupon  = require('../models/Coupon');
-const User    = require('../models/User');
-const { sendOrderConfirmationEmail } = require('../utils/tokenUtils');
-const {
-  sendOrderConfirmationWhatsApp,
-  sendOrderStatusWhatsApp,
-} = require('../utils/whatsappUtils');
 
-// Helper — send notifications without crashing main flow
-const notify = async (fn, ...args) => {
-  try { await fn(...args); } catch (e) { console.error('Notification error:', e.message); }
+// ── Cancellation fee rules (% of order total deducted) ────────
+const CANCEL_FEE = {
+  placed:         0,    // Free cancel
+  confirmed:      0,    // Free cancel
+  packed:         5,    // 5% fee
+  shipped:        10,   // 10% fee
+  outForDelivery: 15,   // 15% fee — mid-delivery
 };
 
-// ── Create Order ─────────────────────────────────────────────
+// @desc    Create order
+// @route   POST /api/orders/create
 exports.createOrder = async (req, res) => {
   try {
     const { items, shippingAddress, paymentMethod, couponCode } = req.body;
@@ -24,62 +21,58 @@ exports.createOrder = async (req, res) => {
 
     for (const item of items) {
       const product = await Product.findById(item.product);
-      if (!product)
-        return res.status(404).json({ success: false, message: `Product not found: ${item.product}` });
-      if (product.stock < item.quantity)
-        return res.status(400).json({ success: false, message: `Insufficient stock for ${product.name}` });
+      if (!product) return res.status(404).json({ success: false, message: `Product not found: ${item.product}` });
+
+      // ── Stock check ──────────────────────────────────────
+      if (product.stock < item.quantity) {
+        return res.status(400).json({
+          success: false,
+          message: `Insufficient stock for "${product.name}". Available: ${product.stock}`,
+        });
+      }
+      if (product.stock === 0) {
+        return res.status(400).json({ success: false, message: `"${product.name}" is out of stock.` });
+      }
 
       const price = product.discountPrice || product.price;
       itemsPrice += price * item.quantity;
       orderItems.push({
-        product: product._id, name: product.name,
-        image: product.images[0]?.url, price,
-        quantity: item.quantity, unit: product.unit,
+        product:  product._id,
+        name:     product.name,
+        image:    product.images?.[0]?.url || '',
+        price,
+        quantity: item.quantity,
+        unit:     product.unit,
       });
+
+      // ── Deduct stock immediately ─────────────────────────
+      await Product.findByIdAndUpdate(item.product, { $inc: { stock: -item.quantity } });
     }
 
-    const shippingPrice = itemsPrice > 500 ? 0 : 50;
-    const taxPrice      = Math.round(itemsPrice * 0.05);
-    let   discountAmount = 0;
-
+    // Coupon
+    let discountAmount = 0;
     if (couponCode) {
-      const coupon = await Coupon.findOne({ code: couponCode.toUpperCase() });
-      if (coupon) {
-        const validity = coupon.isValid(itemsPrice, req.user._id);
-        if (validity.valid) discountAmount = coupon.calculateDiscount(itemsPrice);
+      const Coupon = require('../models/Coupon');
+      const coupon = await Coupon.findOne({ code: couponCode.toUpperCase(), isActive: true });
+      if (coupon && itemsPrice >= coupon.minOrderAmount) {
+        discountAmount = coupon.discountType === 'percentage'
+          ? Math.round(itemsPrice * coupon.discountValue / 100)
+          : coupon.discountValue;
       }
     }
 
-    const totalAmount = itemsPrice + shippingPrice + taxPrice - discountAmount;
+    const shippingPrice = itemsPrice > 500 ? 0 : 50;
+    const taxPrice      = 0;   // GST included in price — not shown separately
+    const totalAmount   = itemsPrice + shippingPrice - discountAmount;
 
     const order = await Order.create({
       user: req.user._id, items: orderItems, shippingAddress,
       paymentMethod, itemsPrice, shippingPrice, taxPrice,
       discountAmount, totalAmount, couponCode,
-      statusHistory: [{ status: 'placed', note: 'Order placed successfully' }],
+      orderStatus: 'placed',
+      paymentStatus: paymentMethod === 'cod' ? 'pending' : 'pending',
+      statusHistory: [{ status: 'placed', note: 'Order placed successfully', timestamp: new Date() }],
     });
-
-    // Reduce stock
-    for (const item of items) {
-      await Product.findByIdAndUpdate(item.product, { $inc: { stock: -item.quantity } });
-    }
-
-    // Update coupon usage
-    if (couponCode && discountAmount > 0) {
-      await Coupon.findOneAndUpdate(
-        { code: couponCode.toUpperCase() },
-        { $inc: { usedCount: 1 }, $push: { usedBy: req.user._id } }
-      );
-    }
-
-    // ── Notifications ────────────────────────────────────────
-    // Email confirmation
-    await notify(sendOrderConfirmationEmail, req.user.email, req.user.name, order);
-
-    // WhatsApp confirmation (if user has phone)
-    if (req.user.phone) {
-      await notify(sendOrderConfirmationWhatsApp, req.user.phone, req.user.name, order);
-    }
 
     res.status(201).json({ success: true, order });
   } catch (error) {
@@ -87,119 +80,114 @@ exports.createOrder = async (req, res) => {
   }
 };
 
-// ── Get My Orders ─────────────────────────────────────────────
-exports.getMyOrders = async (req, res) => {
+// @desc    Get user orders
+exports.getUserOrders = async (req, res) => {
   try {
-    const { page = 1, limit = 10, status } = req.query;
-    const query = { user: req.user._id };
-    if (status) query.orderStatus = status;
-
-    const skip = (Number(page) - 1) * Number(limit);
-    const [orders, total] = await Promise.all([
-      Order.find(query).sort({ createdAt: -1 }).skip(skip).limit(Number(limit)),
-      Order.countDocuments(query),
-    ]);
-
-    res.status(200).json({ success: true, orders, total, pages: Math.ceil(total / Number(limit)) });
+    const orders = await Order.find({ user: req.user._id }).sort({ createdAt: -1 });
+    res.status(200).json({ success: true, orders });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
 };
 
-// ── Get Single Order ──────────────────────────────────────────
-exports.getOrder = async (req, res) => {
+// @desc    Get single order
+exports.getOrderById = async (req, res) => {
   try {
     const order = await Order.findById(req.params.id).populate('user', 'name email phone');
-    if (!order)
-      return res.status(404).json({ success: false, message: 'Order not found' });
+    if (!order) return res.status(404).json({ success: false, message: 'Order not found' });
     if (order.user._id.toString() !== req.user._id.toString() && req.user.role !== 'admin')
       return res.status(403).json({ success: false, message: 'Not authorized' });
-
     res.status(200).json({ success: true, order });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
 };
 
-// ── Cancel Order ──────────────────────────────────────────────
+// @desc    Cancel order — with restock + cancellation fee for mid-delivery
+// @route   PUT /api/orders/:id/cancel
 exports.cancelOrder = async (req, res) => {
   try {
-    const order = await Order.findById(req.params.id).populate('user', 'name email phone');
-    if (!order)
-      return res.status(404).json({ success: false, message: 'Order not found' });
-    if (order.user._id.toString() !== req.user._id.toString())
+    const order = await Order.findById(req.params.id);
+    if (!order) return res.status(404).json({ success: false, message: 'Order not found' });
+    if (order.user.toString() !== req.user._id.toString())
       return res.status(403).json({ success: false, message: 'Not authorized' });
 
-    const cancellable = ['placed', 'confirmed'];
-    if (!cancellable.includes(order.orderStatus))
-      return res.status(400).json({ success: false, message: `Cannot cancel order at ${order.orderStatus} stage` });
+    // Already cancelled or delivered
+    if (['cancelled', 'delivered', 'returned'].includes(order.orderStatus))
+      return res.status(400).json({ success: false, message: `Order is already ${order.orderStatus}` });
 
-    order.orderStatus = 'cancelled';
-    order.cancelledAt = new Date();
-    order.cancelReason = req.body.reason || 'Cancelled by user';
-    order.statusHistory.push({ status: 'cancelled', note: order.cancelReason });
+    const reason       = req.body.reason || 'Cancelled by user';
+    const feePercent   = CANCEL_FEE[order.orderStatus] || 0;
+    const cancelFee    = feePercent > 0 ? Math.round(order.totalAmount * feePercent / 100) : 0;
+    const refundAmount = order.totalAmount - cancelFee;
 
-    // Restore stock
+    order.orderStatus  = 'cancelled';
+    order.cancelledAt  = new Date();
+    order.cancelReason = reason;
+    order.cancelFee    = cancelFee;
+    order.refundAmount = refundAmount;
+    order.statusHistory.push({
+      status: 'cancelled',
+      note: cancelFee > 0
+        ? `${reason}. Cancellation fee: ₹${cancelFee} (${feePercent}%). Refund: ₹${refundAmount}`
+        : reason,
+      timestamp: new Date(),
+    });
+
+    // ── AUTO RESTOCK ─────────────────────────────────────
     for (const item of order.items) {
       await Product.findByIdAndUpdate(item.product, { $inc: { stock: item.quantity } });
     }
+
     await order.save();
 
-    // Notify user on WhatsApp
-    if (order.user.phone) {
-      await notify(sendOrderStatusWhatsApp, order.user.phone, order.user.name, order, 'cancelled');
-    }
-
-    res.status(200).json({ success: true, message: 'Order cancelled successfully', order });
+    res.status(200).json({
+      success: true,
+      message: 'Order cancelled successfully',
+      cancelFee,
+      refundAmount,
+      feePercent,
+      order,
+    });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
 };
 
-// ── Admin: Get All Orders ─────────────────────────────────────
-exports.getAllOrders = async (req, res) => {
-  try {
-    const { page = 1, limit = 20, status, paymentStatus } = req.query;
-    const query = {};
-    if (status) query.orderStatus = status;
-    if (paymentStatus) query.paymentStatus = paymentStatus;
-
-    const skip = (Number(page) - 1) * Number(limit);
-    const [orders, total] = await Promise.all([
-      Order.find(query).populate('user', 'name email phone').sort({ createdAt: -1 }).skip(skip).limit(Number(limit)),
-      Order.countDocuments(query),
-    ]);
-    res.status(200).json({ success: true, orders, total, pages: Math.ceil(total / Number(limit)) });
-  } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
-  }
-};
-
-// ── Admin: Update Order Status + WhatsApp notification ────────
+// @desc    Admin - Update order status
+// @route   PUT /api/admin/orders/:id/status
 exports.updateOrderStatus = async (req, res) => {
   try {
-    const { status, trackingId, note } = req.body;
+    const { status, trackingId, note, deliveryAgent } = req.body;
+    const order = await Order.findById(req.params.id);
+    if (!order) return res.status(404).json({ success: false, message: 'Order not found' });
 
-    // Populate user so we have phone number
-    const order = await Order.findById(req.params.id).populate('user', 'name email phone');
-    if (!order)
-      return res.status(404).json({ success: false, message: 'Order not found' });
-
-    const prevStatus  = order.orderStatus;
     order.orderStatus = status;
-    if (trackingId)         order.trackingId  = trackingId;
-    if (trackingId)         order.trackingNumber = trackingId;
+    if (trackingId)    order.trackingId    = trackingId;
+    if (deliveryAgent) order.deliveryAgent = deliveryAgent;
     if (status === 'delivered') order.deliveredAt = new Date();
-    order.statusHistory.push({ status, note: note || `Order ${status}` });
+    order.statusHistory.push({ status, note: note || `Order ${status}`, timestamp: new Date() });
 
     await order.save();
-
-    // ── Send WhatsApp status update to customer ─────────────
-    if (order.user?.phone && status !== prevStatus) {
-      await notify(sendOrderStatusWhatsApp, order.user.phone, order.user.name, order, status);
-    }
-
     res.status(200).json({ success: true, order });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// @desc    Admin - Get all orders
+exports.getAllOrders = async (req, res) => {
+  try {
+    const { page=1, limit=20, status, paymentStatus } = req.query;
+    const query = {};
+    if (status)        query.orderStatus   = status;
+    if (paymentStatus) query.paymentStatus = paymentStatus;
+    const skip = (Number(page)-1) * Number(limit);
+    const [orders, total] = await Promise.all([
+      Order.find(query).populate('user','name email').sort({ createdAt: -1 }).skip(skip).limit(Number(limit)),
+      Order.countDocuments(query),
+    ]);
+    res.status(200).json({ success: true, orders, total, pages: Math.ceil(total/Number(limit)) });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }

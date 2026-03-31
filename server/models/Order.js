@@ -51,11 +51,13 @@ const orderSchema = new mongoose.Schema({
   deliveredAt: Date,
   cancelledAt: Date,
   cancelReason: String,
+  cancelFee: { type: Number, default: 0 },
+  refundAmount: { type: Number, default: 0 },
+  deliveryAgent: {
+    name: String,
+    phone: String,
+    vehicleNo: String,
+  },
 }, { timestamps: true });
-trackingHistory: [{
-  status: String,
-  location: String,
-  timestamp: { type: Date, default: Date.now }
-}]
 
 module.exports = mongoose.model('Order', orderSchema);

@@ -1,17 +1,19 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import { useDispatch } from 'react-redux';
 import {
   LayoutDashboard, Package, ShoppingCart, Users,
-  Store, LogOut, Menu, X, Leaf,
-  TrendingUp, AlertTriangle,
+  Store, LogOut, Menu, X, Leaf, TrendingUp,
+  AlertTriangle, RefreshCw, Truck, Phone, Car,
+  UserCheck, Plus, Edit2, Trash2, Save, Loader2,
 } from 'lucide-react';
 import { logoutUser } from '../../redux/slices/authSlice';
 import API from '../../utils/api';
 import Loader from '../../components/common/Loader';
+import toast from 'react-hot-toast';
 
-const NAV_ITEMS = [
+const NAV = [
   { path: '/admin',          Icon: LayoutDashboard, label: 'Dashboard'  },
   { path: '/admin/products', Icon: Package,         label: 'Products'   },
   { path: '/admin/orders',   Icon: ShoppingCart,    label: 'Orders'     },
@@ -20,204 +22,376 @@ const NAV_ITEMS = [
 ];
 
 const STATUS_COLORS = {
-  placed:         '#F59E0B',
-  confirmed:      '#3B82F6',
-  packed:         '#8B5CF6',
-  shipped:        '#06B6D4',
-  outForDelivery: '#F97316',
-  delivered:      '#22C55E',
-  cancelled:      '#EF4444',
+  placed:'#F59E0B', confirmed:'#3B82F6', packed:'#8B5CF6',
+  shipped:'#06B6D4', outForDelivery:'#F97316', delivered:'#22C55E', cancelled:'#EF4444',
 };
 
-const StatCard = ({ Icon, label, value, color, sub }) => (
-  <div style={{ background: 'white', borderRadius: '14px', padding: '20px', boxShadow: '0 2px 8px rgba(0,0,0,0.05)', borderLeft: `4px solid ${color}`, border: `1px solid #F3F4F6`, borderLeftColor: color }}>
-    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-      <div>
-        <p style={{ color: '#9CA3AF', fontSize: '0.78rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', margin: 0 }}>{label}</p>
-        <p style={{ fontSize: 'clamp(1.4rem,3vw,1.9rem)', fontWeight: 800, color: '#1B1B1B', fontFamily: 'Inter,sans-serif', margin: '6px 0 0' }}>{value}</p>
-        {sub && <p style={{ fontSize: '0.75rem', color: '#22C55E', margin: '4px 0 0', fontWeight: 600 }}>{sub}</p>}
-      </div>
-      <div style={{ background: `${color}18`, borderRadius: '10px', padding: '10px' }}>
-        <Icon size={20} color={color}/>
-      </div>
-    </div>
-  </div>
-);
-
-const AdminDashboard = () => {
+// ── Shared Sidebar ────────────────────────────────────────────
+export const AdminSidebar = ({ mobile, onClose }) => {
   const dispatch  = useDispatch();
   const navigate  = useNavigate();
   const location  = useLocation();
-  const [stats,   setStats]   = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-
-  useEffect(() => {
-    API.get('/admin/dashboard')
-      .then(({ data }) => setStats(data))
-      .catch(() => {})
-      .finally(() => setLoading(false));
-  }, []);
 
   const handleLogout = () => { dispatch(logoutUser()); navigate('/'); };
 
-  const Sidebar = ({ mobile = false }) => (
-    <div style={{
-      width: mobile ? '100%' : '220px',
-      background: '#1B4332',
-      color: 'white',
-      display: 'flex',
-      flexDirection: 'column',
-      flexShrink: 0,
-      ...(mobile ? {} : { position: 'sticky', top: 0, height: '100vh', overflowY: 'auto' }),
-    }}>
-      {/* Brand */}
-      <div style={{ padding: '20px', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <div style={{ background: 'rgba(116,198,157,0.2)', borderRadius: '8px', padding: '6px' }}>
-              <Leaf size={16} color="#74C69D"/>
-            </div>
-            <div>
-              <p style={{ fontFamily: 'Playfair Display,serif', fontWeight: 700, fontSize: '1rem', margin: 0 }}>GreenRoots</p>
-              <p style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.45)', margin: 0 }}>Admin Panel</p>
-            </div>
+  return (
+    <div style={{ width: mobile ? '100%' : '220px', background: '#1B4332', color: 'white', display: 'flex', flexDirection: 'column', ...(mobile ? {} : { position:'sticky', top:0, height:'100vh', overflowY:'auto' }) }}>
+      <div style={{ padding: '18px 20px', borderBottom: '1px solid rgba(255,255,255,0.08)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <div style={{ background: 'rgba(116,198,157,0.2)', borderRadius: '8px', padding: '5px' }}>
+            <Leaf size={15} color="#74C69D"/>
           </div>
-          {mobile && (
-            <button onClick={() => setSidebarOpen(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.6)', padding: '4px' }}>
-              <X size={18}/>
-            </button>
-          )}
+          <div>
+            <p style={{ fontFamily:'Playfair Display,serif', fontWeight:700, fontSize:'0.95rem', margin:0 }}>GreenRoots</p>
+            <p style={{ fontSize:'0.62rem', color:'rgba(255,255,255,0.4)', margin:0 }}>Admin Panel</p>
+          </div>
         </div>
+        {mobile && <button onClick={onClose} style={{ background:'none', border:'none', cursor:'pointer', color:'rgba(255,255,255,0.6)' }}><X size={17}/></button>}
       </div>
 
-      {/* Nav */}
-      <nav style={{ flex: 1, padding: '12px 0' }}>
-        {NAV_ITEMS.map(({ path, Icon, label }) => {
-          const active = location.pathname === path;
+      <nav style={{ flex:1, padding:'10px 0' }}>
+        {NAV.map(({ path, Icon, label }) => {
+          const active = location.pathname === path || (path !== '/' && location.pathname.startsWith(path));
           return (
-            <Link key={label} to={path} onClick={() => setSidebarOpen(false)}
-              style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '11px 20px', color: active ? '#74C69D' : 'rgba(255,255,255,0.7)', textDecoration: 'none', fontSize: '0.88rem', fontWeight: active ? 700 : 400, background: active ? 'rgba(116,198,157,0.12)' : 'transparent', borderLeft: active ? '3px solid #74C69D' : '3px solid transparent', transition: 'all 0.15s' }}>
+            <Link key={label} to={path} onClick={onClose}
+              style={{ display:'flex', alignItems:'center', gap:'10px', padding:'11px 20px', color: active?'#74C69D':'rgba(255,255,255,0.7)', textDecoration:'none', fontSize:'0.87rem', fontWeight: active?700:400, background: active?'rgba(116,198,157,0.1)':'transparent', borderLeft: active?'3px solid #74C69D':'3px solid transparent', transition:'all 0.15s' }}>
               <Icon size={15}/> {label}
             </Link>
           );
         })}
       </nav>
 
-      {/* Logout */}
       <button onClick={handleLogout}
-        style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '14px 20px', color: 'rgba(255,120,120,0.85)', background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.88rem', borderTop: '1px solid rgba(255,255,255,0.08)', width: '100%' }}>
-        <LogOut size={15}/> Logout
+        style={{ display:'flex', alignItems:'center', gap:'10px', padding:'14px 20px', color:'rgba(255,120,120,0.85)', background:'none', border:'none', cursor:'pointer', fontSize:'0.87rem', borderTop:'1px solid rgba(255,255,255,0.08)', width:'100%' }}>
+        <LogOut size={14}/> Logout
       </button>
     </div>
   );
+};
+
+// ── Delivery Agent Manager ────────────────────────────────────
+const emptyAgent = { name: '', phone: '', vehicleNo: '', zone: '', isActive: true };
+
+const DeliveryAgents = () => {
+  const [agents,  setAgents]  = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [showForm,setShowForm]= useState(false);
+  const [editing, setEditing] = useState(null);
+  const [form,    setForm]    = useState(emptyAgent);
+  const [saving,  setSaving]  = useState(false);
+
+  useEffect(() => {
+    // Load agents from localStorage (simple persistence without a separate API)
+    try {
+      const stored = JSON.parse(localStorage.getItem('greenroots_agents') || '[]');
+      setAgents(stored);
+    } catch {}
+    setLoading(false);
+  }, []);
+
+  const save = (updated) => {
+    localStorage.setItem('greenroots_agents', JSON.stringify(updated));
+    setAgents(updated);
+  };
+
+  const handleSave = () => {
+    if (!form.name.trim())  { toast.error('Name required'); return; }
+    if (!/^[6-9]\d{9}$/.test(form.phone)) { toast.error('Valid phone required'); return; }
+    setSaving(true);
+    setTimeout(() => {
+      if (editing !== null) {
+        const updated = agents.map((a,i) => i===editing ? { ...form } : a);
+        save(updated);
+        toast.success('Agent updated!');
+      } else {
+        save([...agents, { ...form, id: Date.now() }]);
+        toast.success('Agent added!');
+      }
+      setShowForm(false); setEditing(null); setForm(emptyAgent); setSaving(false);
+    }, 400);
+  };
+
+  const handleDelete = (idx) => {
+    if (!window.confirm('Remove this agent?')) return;
+    const updated = agents.filter((_,i) => i!==idx);
+    save(updated); toast.success('Agent removed');
+  };
+
+  const handleToggle = (idx) => {
+    const updated = agents.map((a,i) => i===idx ? {...a,isActive:!a.isActive} : a);
+    save(updated);
+  };
+
+  if (loading) return <div style={{ padding:'20px', textAlign:'center' }}><Loader2 size={20} color="#2D6A4F" style={{ animation:'spin 1s linear infinite' }}/></div>;
+
+  return (
+    <div>
+      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'16px' }}>
+        <h3 style={{ fontFamily:'Inter,sans-serif', fontWeight:700, margin:0, fontSize:'0.95rem', display:'flex', alignItems:'center', gap:'7px' }}>
+          <Truck size={15} color="#2D6A4F"/> Delivery Agents
+        </h3>
+        <button onClick={() => { setEditing(null); setForm(emptyAgent); setShowForm(true); }}
+          style={{ display:'flex', alignItems:'center', gap:'6px', padding:'8px 14px', background:'#2D6A4F', color:'white', border:'none', borderRadius:'8px', fontWeight:700, cursor:'pointer', fontFamily:'Inter,sans-serif', fontSize:'0.82rem' }}>
+          <Plus size={13}/> Add Agent
+        </button>
+      </div>
+
+      {/* Form */}
+      {showForm && (
+        <div style={{ background:'#F8FFF4', border:'1px solid #D1FAE5', borderRadius:'12px', padding:'16px', marginBottom:'16px' }}>
+          <h4 style={{ fontFamily:'Inter,sans-serif', fontWeight:700, fontSize:'0.88rem', marginBottom:'12px', display:'flex', alignItems:'center', gap:'6px' }}>
+            <UserCheck size={14} color="#2D6A4F"/> {editing!==null ? 'Edit Agent' : 'New Delivery Agent'}
+          </h4>
+          <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(180px,1fr))', gap:'10px', marginBottom:'12px' }}>
+            {[
+              ['name',      'Full Name *',      'text', 'Agent name'],
+              ['phone',     'Phone Number *',   'tel',  '10-digit mobile'],
+              ['vehicleNo', 'Vehicle Number',   'text', 'KA01AB1234'],
+              ['zone',      'Delivery Zone',    'text', 'e.g. Bangalore South'],
+            ].map(([key, label, type, placeholder]) => (
+              <div key={key}>
+                <label style={{ fontSize:'0.72rem', fontWeight:700, color:'#374151', display:'block', marginBottom:'3px' }}>{label}</label>
+                <input type={type} placeholder={placeholder} value={form[key]}
+                  onChange={e => setForm(f => ({...f,[key]:e.target.value}))}
+                  style={{ width:'100%', padding:'8px 10px', border:'1.5px solid #E5E7EB', borderRadius:'7px', fontSize:'0.83rem', fontFamily:'Inter,sans-serif', boxSizing:'border-box', outline:'none' }}/>
+              </div>
+            ))}
+          </div>
+          <div style={{ display:'flex', gap:'8px' }}>
+            <button onClick={handleSave} disabled={saving}
+              style={{ display:'flex', alignItems:'center', gap:'5px', padding:'9px 18px', background:'#2D6A4F', color:'white', border:'none', borderRadius:'8px', fontWeight:700, cursor:'pointer', fontFamily:'Inter,sans-serif', fontSize:'0.83rem' }}>
+              {saving ? <><Loader2 size={13} style={{ animation:'spin 1s linear infinite' }}/> Saving...</> : <><Save size={13}/> Save Agent</>}
+            </button>
+            <button onClick={() => { setShowForm(false); setEditing(null); setForm(emptyAgent); }}
+              style={{ padding:'9px 14px', background:'none', border:'1.5px solid #E5E7EB', borderRadius:'8px', cursor:'pointer', color:'#6B7280', fontFamily:'Inter,sans-serif', fontSize:'0.83rem' }}>
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Agents list */}
+      {agents.length === 0 ? (
+        <div style={{ textAlign:'center', padding:'32px', color:'#9CA3AF', background:'white', borderRadius:'12px', border:'2px dashed #E5E7EB' }}>
+          <Truck size={32} style={{ margin:'0 auto 10px', opacity:0.3 }}/>
+          <p style={{ fontSize:'0.85rem' }}>No delivery agents added yet</p>
+        </div>
+      ) : (
+        <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(240px,1fr))', gap:'10px' }}>
+          {agents.map((agent, idx) => (
+            <div key={idx} style={{ background:'white', borderRadius:'12px', padding:'14px 16px', border:`1px solid ${agent.isActive ? '#D1FAE5' : '#F3F4F6'}`, opacity: agent.isActive ? 1 : 0.65 }}>
+              <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:'8px' }}>
+                <div style={{ display:'flex', alignItems:'center', gap:'8px' }}>
+                  <div style={{ background: agent.isActive ? '#D1FAE5' : '#F3F4F6', borderRadius:'50%', width:'36px', height:'36px', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
+                    <UserCheck size={16} color={agent.isActive ? '#2D6A4F' : '#9CA3AF'}/>
+                  </div>
+                  <div>
+                    <p style={{ fontWeight:700, fontSize:'0.88rem', margin:0 }}>{agent.name}</p>
+                    <p style={{ fontSize:'0.73rem', color:'#9CA3AF', margin:'2px 0 0' }}>{agent.zone || 'No zone set'}</p>
+                  </div>
+                </div>
+                <span style={{ background: agent.isActive ? '#D1FAE5' : '#F3F4F6', color: agent.isActive ? '#065F46' : '#9CA3AF', fontSize:'0.63rem', fontWeight:700, padding:'2px 7px', borderRadius:'100px' }}>
+                  {agent.isActive ? 'ACTIVE' : 'INACTIVE'}
+                </span>
+              </div>
+              <div style={{ fontSize:'0.78rem', color:'#6B7280', marginBottom:'10px' }}>
+                <p style={{ display:'flex', alignItems:'center', gap:'5px', margin:'3px 0' }}><Phone size={11}/> {agent.phone}</p>
+                {agent.vehicleNo && <p style={{ display:'flex', alignItems:'center', gap:'5px', margin:'3px 0' }}><Car size={11}/> {agent.vehicleNo}</p>}
+              </div>
+              <div style={{ display:'flex', gap:'5px' }}>
+                <button onClick={() => handleToggle(idx)}
+                  style={{ flex:1, padding:'5px', background: agent.isActive?'#FEF3C7':'#D1FAE5', color: agent.isActive?'#D97706':'#2D6A4F', border:'none', borderRadius:'6px', fontWeight:600, fontSize:'0.7rem', cursor:'pointer', fontFamily:'Inter,sans-serif' }}>
+                  {agent.isActive ? 'Deactivate' : 'Activate'}
+                </button>
+                <button onClick={() => { setEditing(idx); setForm({...agent}); setShowForm(true); }}
+                  style={{ padding:'5px 9px', background:'#EFF6FF', color:'#2563EB', border:'none', borderRadius:'6px', cursor:'pointer', display:'flex' }}>
+                  <Edit2 size={12}/>
+                </button>
+                <button onClick={() => handleDelete(idx)}
+                  style={{ padding:'5px 9px', background:'#FFF1F2', color:'#E11D48', border:'none', borderRadius:'6px', cursor:'pointer', display:'flex' }}>
+                  <Trash2 size={12}/>
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
+// ── Main Admin Dashboard ──────────────────────────────────────
+const AdminDashboard = () => {
+  const [stats,       setStats]       = useState(null);
+  const [loading,     setLoading]     = useState(true);
+  const [refreshing,  setRefreshing]  = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [activeTab,   setActiveTab]   = useState('overview');
+
+  const loadStats = useCallback(async (silent=false) => {
+    if (!silent) setLoading(true); else setRefreshing(true);
+    try {
+      const { data } = await API.get('/admin/dashboard');
+      setStats(data);
+    } catch {}
+    finally { setLoading(false); setRefreshing(false); }
+  }, []);
+
+  useEffect(() => {
+    loadStats();
+    // Auto-refresh every 60s to keep dashboard synced
+    const interval = setInterval(() => loadStats(true), 60000);
+    return () => clearInterval(interval);
+  }, [loadStats]);
 
   return (
     <>
       <Helmet><title>Admin Dashboard — GreenRoots</title></Helmet>
-      <div style={{ minHeight: '100vh', background: '#F8FFF4', display: 'flex' }}>
+      <div style={{ minHeight:'100vh', background:'#F6FAF6', display:'flex' }}>
 
         {/* Desktop sidebar */}
         <div className="admin-sidebar-desktop">
-          <Sidebar/>
+          <AdminSidebar mobile={false} onClose={() => {}}/>
         </div>
 
         {/* Mobile sidebar overlay */}
         {sidebarOpen && (
-          <div style={{ position: 'fixed', inset: 0, zIndex: 1000, display: 'flex' }}>
-            <div style={{ width: '260px', flexShrink: 0 }}>
-              <Sidebar mobile/>
+          <div style={{ position:'fixed', inset:0, zIndex:1000, display:'flex' }}>
+            <div style={{ width:'260px', flexShrink:0 }}>
+              <AdminSidebar mobile={true} onClose={() => setSidebarOpen(false)}/>
             </div>
-            <div onClick={() => setSidebarOpen(false)} style={{ flex: 1, background: 'rgba(0,0,0,0.4)' }}/>
+            <div onClick={() => setSidebarOpen(false)} style={{ flex:1, background:'rgba(0,0,0,0.4)' }}/>
           </div>
         )}
 
-        {/* Main content */}
-        <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
+        <div style={{ flex:1, minWidth:0, display:'flex', flexDirection:'column' }}>
           {/* Mobile topbar */}
-          <div className="admin-topbar-mobile" style={{ background: '#1B4332', padding: '14px 18px', display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <button onClick={() => setSidebarOpen(true)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'white', display: 'flex', padding: '2px' }}>
-              <Menu size={20}/>
-            </button>
-            <span style={{ fontFamily: 'Playfair Display,serif', color: 'white', fontWeight: 700, fontSize: '1rem' }}>GreenRoots Admin</span>
+          <div className="admin-topbar-mobile" style={{ background:'#1B4332', padding:'13px 18px', display:'flex', alignItems:'center', gap:'12px' }}>
+            <button onClick={() => setSidebarOpen(true)} style={{ background:'none', border:'none', cursor:'pointer', color:'white', display:'flex' }}><Menu size={20}/></button>
+            <span style={{ fontFamily:'Playfair Display,serif', color:'white', fontWeight:700, fontSize:'0.95rem' }}>GreenRoots Admin</span>
           </div>
 
-          <div style={{ flex: 1, padding: 'clamp(16px,3vw,32px)', overflowY: 'auto' }}>
-            <h1 style={{ fontSize: 'clamp(1.2rem,3vw,1.7rem)', marginBottom: '4px' }}>Dashboard</h1>
-            <p style={{ color: '#9CA3AF', marginBottom: '24px', fontSize: '0.85rem' }}>Welcome back, Admin</p>
+          <div style={{ flex:1, padding:'clamp(16px,3vw,28px)', overflowY:'auto' }}>
 
-            {loading ? <Loader/> : stats && (
-              <>
-                {/* Stat cards */}
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(180px,1fr))', gap: '14px', marginBottom: '24px' }}>
-                  <StatCard Icon={TrendingUp} label="Revenue"  value={`₹${stats.stats.totalRevenue?.toLocaleString('en-IN')}`} color="#22C55E"/>
-                  <StatCard Icon={ShoppingCart} label="Orders"  value={stats.stats.totalOrders}    color="#3B82F6"/>
-                  <StatCard Icon={Users}        label="Users"   value={stats.stats.totalUsers}     color="#8B5CF6"/>
-                  <StatCard Icon={Package}      label="Products" value={stats.stats.totalProducts}  color="#F59E0B"/>
-                </div>
+            {/* Header */}
+            <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'20px', flexWrap:'wrap', gap:'10px' }}>
+              <div>
+                <h1 style={{ fontSize:'clamp(1.2rem,3vw,1.6rem)', margin:0 }}>Dashboard</h1>
+                <p style={{ color:'#9CA3AF', fontSize:'0.8rem', marginTop:'3px' }}>Welcome back, Admin</p>
+              </div>
+              <div style={{ display:'flex', gap:'8px', flexWrap:'wrap' }}>
+                <Link to="/admin/products"
+                  style={{ display:'flex', alignItems:'center', gap:'6px', padding:'9px 16px', background:'#2D6A4F', color:'white', border:'none', borderRadius:'9px', fontWeight:700, cursor:'pointer', fontFamily:'Inter,sans-serif', fontSize:'0.83rem', textDecoration:'none' }}>
+                  <Plus size={14}/> Add Product
+                </Link>
+                <button onClick={() => loadStats(true)} disabled={refreshing}
+                  style={{ display:'flex', alignItems:'center', gap:'6px', padding:'9px 14px', background:'white', color:'#374151', border:'1.5px solid #E5E7EB', borderRadius:'9px', fontWeight:600, cursor:'pointer', fontFamily:'Inter,sans-serif', fontSize:'0.83rem' }}>
+                  <RefreshCw size={13} style={{ animation: refreshing?'spin 1s linear infinite':undefined }}/> Refresh
+                </button>
+              </div>
+            </div>
 
-                {/* Recent orders */}
-                <div style={{ background: 'white', borderRadius: '14px', padding: 'clamp(16px,3vw,24px)', boxShadow: '0 2px 8px rgba(0,0,0,0.05)', marginBottom: '18px', border: '1px solid #F3F4F6', overflowX: 'auto' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '8px' }}>
-                    <h3 style={{ fontFamily: 'Inter,sans-serif', fontWeight: 700, fontSize: '0.95rem', margin: 0 }}>Recent Orders</h3>
-                    <Link to="/admin/orders" style={{ color: '#2D6A4F', fontSize: '0.83rem', fontWeight: 700, textDecoration: 'none' }}>View All →</Link>
-                  </div>
-                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem', minWidth: '400px' }}>
-                    <thead>
-                      <tr style={{ borderBottom: '2px solid #F3F4F6' }}>
-                        {['Order ID', 'Customer', 'Amount', 'Status'].map(h => (
-                          <th key={h} style={{ textAlign: 'left', padding: '8px 10px', color: '#9CA3AF', fontWeight: 700, fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.04em' }}>{h}</th>
-                        ))}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {stats.recentOrders?.map(order => (
-                        <tr key={order._id} style={{ borderBottom: '1px solid #F9FAFB' }}>
-                          <td style={{ padding: '10px' }}>
-                            <Link to={`/admin/orders/${order._id}`} style={{ fontFamily: 'monospace', fontWeight: 700, color: '#2D6A4F', textDecoration: 'none', fontSize: '0.83rem' }}>
-                              #{order._id.slice(-8).toUpperCase()}
-                            </Link>
-                          </td>
-                          <td style={{ padding: '10px', color: '#374151' }}>{order.user?.name}</td>
-                          <td style={{ padding: '10px', fontWeight: 700, color: '#2D6A4F' }}>₹{order.totalAmount}</td>
-                          <td style={{ padding: '10px' }}>
-                            <span style={{ background: `${STATUS_COLORS[order.orderStatus] || '#9CA3AF'}18`, color: STATUS_COLORS[order.orderStatus] || '#9CA3AF', padding: '3px 8px', borderRadius: '100px', fontSize: '0.72rem', fontWeight: 700, textTransform: 'capitalize' }}>
-                              {order.orderStatus === 'outForDelivery' ? 'Out for Delivery' : order.orderStatus}
-                            </span>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+            {/* Tabs */}
+            <div style={{ display:'flex', gap:'4px', background:'white', borderRadius:'10px', padding:'4px', marginBottom:'20px', border:'1px solid #F3F4F6', width:'fit-content' }}>
+              {[['overview','Overview'],['agents','Delivery Agents']].map(([id,label]) => (
+                <button key={id} onClick={() => setActiveTab(id)}
+                  style={{ padding:'8px 16px', border:'none', borderRadius:'8px', cursor:'pointer', fontWeight:600, fontSize:'0.82rem', background: activeTab===id?'#2D6A4F':'transparent', color: activeTab===id?'white':'#6B7280', transition:'all 0.15s', fontFamily:'Inter,sans-serif' }}>
+                  {label}
+                </button>
+              ))}
+            </div>
 
-                {/* Low stock */}
-                {stats.lowStockProducts?.length > 0 && (
-                  <div style={{ background: '#FFFBEB', border: '1px solid #FCD34D', borderRadius: '14px', padding: 'clamp(14px,3vw,20px)' }}>
-                    <h3 style={{ fontFamily: 'Inter,sans-serif', fontWeight: 700, color: '#92400E', marginBottom: '12px', fontSize: '0.92rem', display: 'flex', alignItems: 'center', gap: '7px' }}>
-                      <AlertTriangle size={15} color="#D97706"/> Low Stock Alert
-                    </h3>
-                    {stats.lowStockProducts.map(p => (
-                      <div key={p._id} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid #FDE68A', fontSize: '0.85rem' }}>
-                        <span style={{ color: '#374151' }}>{p.name}</span>
-                        <span style={{ fontWeight: 700, color: p.stock <= 5 ? '#DC2626' : '#F59E0B' }}>{p.stock} left</span>
+            {activeTab === 'overview' && (
+              loading ? <Loader/> : stats && (
+                <>
+                  {/* Stat cards */}
+                  <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(170px,1fr))', gap:'14px', marginBottom:'22px' }}>
+                    {[
+                      { Icon:TrendingUp,  label:'Revenue',  value:`₹${stats.stats.totalRevenue?.toLocaleString('en-IN')}`, color:'#22C55E' },
+                      { Icon:ShoppingCart,label:'Orders',   value:stats.stats.totalOrders,   color:'#3B82F6' },
+                      { Icon:Users,       label:'Users',    value:stats.stats.totalUsers,    color:'#8B5CF6' },
+                      { Icon:Package,     label:'Products', value:stats.stats.totalProducts, color:'#F59E0B' },
+                    ].map(({ Icon,label,value,color }) => (
+                      <div key={label} style={{ background:'white', borderRadius:'12px', padding:'18px', border:'1px solid #F3F4F6', boxShadow:'0 2px 8px rgba(0,0,0,0.05)', borderLeft:`4px solid ${color}` }}>
+                        <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start' }}>
+                          <div>
+                            <p style={{ color:'#9CA3AF', fontSize:'0.73rem', fontWeight:700, textTransform:'uppercase', letterSpacing:'0.05em', margin:0 }}>{label}</p>
+                            <p style={{ fontSize:'clamp(1.3rem,3vw,1.8rem)', fontWeight:800, color:'#1B1B1B', fontFamily:'Inter,sans-serif', margin:'6px 0 0' }}>{value}</p>
+                          </div>
+                          <div style={{ background:`${color}18`, borderRadius:'9px', padding:'9px' }}>
+                            <Icon size={18} color={color}/>
+                          </div>
+                        </div>
                       </div>
                     ))}
                   </div>
-                )}
-              </>
+
+                  {/* Recent orders */}
+                  <div style={{ background:'white', borderRadius:'14px', padding:'clamp(14px,3vw,22px)', boxShadow:'0 2px 8px rgba(0,0,0,0.05)', marginBottom:'16px', border:'1px solid #F3F4F6', overflowX:'auto' }}>
+                    <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'14px', flexWrap:'wrap', gap:'8px' }}>
+                      <h3 style={{ fontFamily:'Inter,sans-serif', fontWeight:700, fontSize:'0.92rem', margin:0 }}>Recent Orders</h3>
+                      <Link to="/admin/orders" style={{ color:'#2D6A4F', fontSize:'0.8rem', fontWeight:700, textDecoration:'none' }}>View All →</Link>
+                    </div>
+                    <table style={{ width:'100%', borderCollapse:'collapse', fontSize:'0.83rem', minWidth:'380px' }}>
+                      <thead>
+                        <tr style={{ borderBottom:'2px solid #F3F4F6' }}>
+                          {['Order ID','Customer','Amount','Status'].map(h => (
+                            <th key={h} style={{ textAlign:'left', padding:'8px 10px', color:'#9CA3AF', fontWeight:700, fontSize:'0.72rem', textTransform:'uppercase', letterSpacing:'0.04em' }}>{h}</th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {stats.recentOrders?.map(order => (
+                          <tr key={order._id} style={{ borderBottom:'1px solid #F9FAFB' }}>
+                            <td style={{ padding:'9px 10px' }}>
+                              <Link to={`/admin/orders`} style={{ fontFamily:'monospace', fontWeight:700, color:'#2D6A4F', textDecoration:'none', fontSize:'0.8rem' }}>
+                                #{order._id.slice(-8).toUpperCase()}
+                              </Link>
+                            </td>
+                            <td style={{ padding:'9px 10px', color:'#374151' }}>{order.user?.name}</td>
+                            <td style={{ padding:'9px 10px', fontWeight:700, color:'#2D6A4F' }}>₹{order.totalAmount}</td>
+                            <td style={{ padding:'9px 10px' }}>
+                              <span style={{ background:`${STATUS_COLORS[order.orderStatus]||'#9CA3AF'}18`, color:STATUS_COLORS[order.orderStatus]||'#9CA3AF', padding:'3px 8px', borderRadius:'100px', fontSize:'0.7rem', fontWeight:700, textTransform:'capitalize' }}>
+                                {order.orderStatus === 'outForDelivery' ? 'Out for Delivery' : order.orderStatus}
+                              </span>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {/* Low stock */}
+                  {stats.lowStockProducts?.length > 0 && (
+                    <div style={{ background:'#FFFBEB', border:'1px solid #FCD34D', borderRadius:'12px', padding:'clamp(14px,3vw,20px)' }}>
+                      <h3 style={{ fontFamily:'Inter,sans-serif', fontWeight:700, color:'#92400E', marginBottom:'10px', fontSize:'0.88rem', display:'flex', alignItems:'center', gap:'6px' }}>
+                        <AlertTriangle size={14} color="#D97706"/> Low Stock Alert
+                      </h3>
+                      {stats.lowStockProducts.map(p => (
+                        <div key={p._id} style={{ display:'flex', justifyContent:'space-between', padding:'7px 0', borderBottom:'1px solid #FDE68A', fontSize:'0.83rem' }}>
+                          <span style={{ color:'#374151' }}>{p.name}</span>
+                          <span style={{ fontWeight:700, color:p.stock<=5?'#DC2626':'#F59E0B' }}>{p.stock} left</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </>
+              )
             )}
+
+            {activeTab === 'agents' && <DeliveryAgents/>}
           </div>
         </div>
       </div>
 
       <style>{`
         .admin-sidebar-desktop { display: block; }
-        .admin-topbar-mobile { display: none; }
+        .admin-topbar-mobile   { display: none; }
         @media (max-width: 768px) {
           .admin-sidebar-desktop { display: none !important; }
-          .admin-topbar-mobile { display: flex !important; }
+          .admin-topbar-mobile   { display: flex !important; }
         }
+        @keyframes spin { to { transform: rotate(360deg); } }
       `}</style>
     </>
   );
