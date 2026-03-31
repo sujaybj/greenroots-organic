@@ -192,3 +192,24 @@ exports.getAllOrders = async (req, res) => {
     res.status(500).json({ success: false, message: error.message });
   }
 };
+
+// @desc    Request return / exchange / refund
+exports.requestReturn = async (req, res) => {
+  try {
+    const { type, reason, description } = req.body;
+    const order = await Order.findById(req.params.id);
+    if (!order) return res.status(404).json({ success: false, message: 'Order not found' });
+    if (order.user.toString() !== req.user._id.toString())
+      return res.status(403).json({ success: false, message: 'Not authorized' });
+    if (order.orderStatus !== 'delivered')
+      return res.status(400).json({ success: false, message: 'Return can only be requested for delivered orders' });
+    if (!type)   return res.status(400).json({ success: false, message: 'Request type is required' });
+    if (!reason) return res.status(400).json({ success: false, message: 'Reason is required' });
+    order.returnRequest = { type, reason, description, status: 'pending', requestedAt: new Date() };
+    order.statusHistory.push({ status: 'returned', note: type + ' requested: ' + reason, timestamp: new Date() });
+    await order.save();
+    res.status(200).json({ success: true, message: type + ' request submitted', order });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
