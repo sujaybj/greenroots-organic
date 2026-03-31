@@ -131,14 +131,21 @@ const authSlice = createSlice({
       })
 
       // Get Me
-      .addCase(getMe.fulfilled, (state, action) => {
-        state.user = action.payload.user;
-        state.isAuthenticated = true;
-      })
-      .addCase(getMe.rejected, (state) => {
-        state.user = null; state.isAuthenticated = false; state.accessToken = null;
-      })
-
+      .addCase(getMe.pending, (state) => {
+  state.loading = true;
+})
+.addCase(getMe.fulfilled, (state, action) => {
+  state.loading = false;
+  state.user = action.payload.user;
+  state.isAuthenticated = true;
+})
+.addCase(getMe.rejected, (state) => {
+  state.loading = false;
+  state.user = null;
+  state.isAuthenticated = false;
+  state.accessToken = null;
+  localStorage.removeItem('accessToken');
+})
       // Update Profile
       .addCase(updateProfile.fulfilled, (state, action) => {
         state.user = action.payload.user;

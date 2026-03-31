@@ -39,11 +39,14 @@ const Login = () => {
   };
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (!validate()) return;
-    const result = await dispatch(loginUser(form));
-    if (!result.error) navigate('/');
-  };
+  e.preventDefault();
+  if (!validate()) return;
+  const result = await dispatch(loginUser(form));
+  if (!result.error) {
+    const user = result.payload?.user;
+    navigate(user?.role === 'admin' ? '/admin' : '/');
+  }
+};
 
   const handleGoogleLogin = () => {
     window.location.href = `${BACKEND}/api/auth/google`;

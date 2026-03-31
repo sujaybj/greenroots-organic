@@ -34,28 +34,33 @@ const AdminOrders = lazy(() => import('./pages/admin/Orders'));
 const AdminUsers = lazy(() => import('./pages/admin/Users'));
 const NotFound = lazy(() => import('./pages/NotFound'));
 
-// Protected Route component
+// Replace ProtectedRoute
 const ProtectedRoute = ({ children }) => {
-  const { isAuthenticated } = useSelector(state => state.auth);
+  const { isAuthenticated, loading } = useSelector(state => state.auth);
+  if (loading) return <Loader fullPage />;
   return isAuthenticated ? children : <Navigate to="/login" replace />;
 };
 
+//  Replace AdminRoute
 const AdminRoute = ({ children }) => {
-  const { isAuthenticated, user } = useSelector(state => state.auth);
+  const { isAuthenticated, user, loading } = useSelector(state => state.auth);
+  if (loading) return <Loader fullPage />;
   if (!isAuthenticated) return <Navigate to="/login" replace />;
   if (user?.role !== 'admin') return <Navigate to="/" replace />;
   return children;
 };
 
+//  Replace AuthRoute
 const AuthRoute = ({ children }) => {
-  const { isAuthenticated } = useSelector(state => state.auth);
+  const { isAuthenticated, loading } = useSelector(state => state.auth);
+  if (loading) return <Loader fullPage />;
   return !isAuthenticated ? children : <Navigate to="/" replace />;
 };
 
 function App() {
   const dispatch = useDispatch();
   const [showSplash, setShowSplash] = React.useState(true);
-  const { isAuthenticated } = useSelector(state => state.auth);
+  const { loading: authLoading } = useSelector(state => state.auth);
 
   useEffect(() => {
     const timer = setTimeout(() => setShowSplash(false), 2500);
@@ -63,14 +68,12 @@ function App() {
   }, []);
 
   useEffect(() => {
-    // Restore session from stored token on every page load / refresh
-    // redux-persist keeps isAuthenticated in localStorage across refreshes
-    // getMe re-validates the token with the server to refresh user data
     const token = localStorage.getItem('accessToken');
     if (token) dispatch(getMe());
   }, [dispatch]);
 
-  if (showSplash) return <SplashScreen />;
+  // Show splash until BOTH splash timer AND auth check are done
+  if (showSplash || authLoading) return <SplashScreen />;
 
   return (
     <HelmetProvider>
