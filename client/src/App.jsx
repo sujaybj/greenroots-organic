@@ -1,5 +1,5 @@
 import React, { useEffect, Suspense, lazy } from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { Toaster } from 'react-hot-toast';
 import { HelmetProvider } from 'react-helmet-async';
@@ -34,33 +34,29 @@ const AdminOrders = lazy(() => import('./pages/admin/Orders'));
 const AdminUsers = lazy(() => import('./pages/admin/Users'));
 const NotFound = lazy(() => import('./pages/NotFound'));
 
-// Replace ProtectedRoute
+// Protected Route component
 const ProtectedRoute = ({ children }) => {
-  const { isAuthenticated, loading } = useSelector(state => state.auth);
-  if (loading) return <Loader fullPage />;
-  return isAuthenticated ? children : <Navigate to="/login" replace />;
+  const { isAuthenticated } = useSelector(state => state.auth);
+  const location = useLocation();
+  return isAuthenticated ? children : <Navigate to="/login" state={{ from: location }} replace />;
 };
 
-//  Replace AdminRoute
 const AdminRoute = ({ children }) => {
-  const { isAuthenticated, user, loading } = useSelector(state => state.auth);
-  if (loading) return <Loader fullPage />;
+  const { isAuthenticated, user } = useSelector(state => state.auth);
   if (!isAuthenticated) return <Navigate to="/login" replace />;
   if (user?.role !== 'admin') return <Navigate to="/" replace />;
   return children;
 };
 
-//  Replace AuthRoute
 const AuthRoute = ({ children }) => {
-  const { isAuthenticated, loading } = useSelector(state => state.auth);
-  if (loading) return <Loader fullPage />;
+  const { isAuthenticated } = useSelector(state => state.auth);
   return !isAuthenticated ? children : <Navigate to="/" replace />;
 };
 
 function App() {
   const dispatch = useDispatch();
   const [showSplash, setShowSplash] = React.useState(true);
-  const { loading: authLoading } = useSelector(state => state.auth);
+  const { isAuthenticated } = useSelector(state => state.auth);
 
   useEffect(() => {
     const timer = setTimeout(() => setShowSplash(false), 2500);
@@ -68,12 +64,14 @@ function App() {
   }, []);
 
   useEffect(() => {
+    // Restore session from stored token on every page load / refresh
+    // redux-persist keeps isAuthenticated in localStorage across refreshes
+    // getMe re-validates the token with the server to refresh user data
     const token = localStorage.getItem('accessToken');
     if (token) dispatch(getMe());
   }, [dispatch]);
 
-  // Show splash until BOTH splash timer AND auth check are done
-  if (showSplash || authLoading) return <SplashScreen />;
+  if (showSplash) return <SplashScreen />;
 
   return (
     <HelmetProvider>
