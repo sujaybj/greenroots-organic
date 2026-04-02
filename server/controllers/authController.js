@@ -1,78 +1,71 @@
-// ─── server/controllers/authController.js ───────────────────
-const crypto  = require('crypto');
-const User    = require('../models/User');
-const {
-  sendTokenResponse, sendOTPEmail, sendPasswordResetEmail,
-  generateAccessToken, generateRefreshToken,
-} = require('../utils/tokenUtils');
-const {
-  sendOTPWhatsApp, sendPasswordResetWhatsApp,
-} = require('../utils/whatsappUtils');
-const jwt = require('jsonwebtoken');
+const crypto = require('crypto');
+const User   = require('../models/User');
+const { generateAccessToken, generateRefreshToken, sendEmail, sendOTPEmail, sendPasswordResetEmail } = require('../utils/tokenUtils');
 
-// ── Helper: send OTP via WhatsApp AND email ─────────────────
-const dispatchOTP = async (user, otp) => {
-  // Always send email
-  try { await sendOTPEmail(user.email, user.name, otp); } catch (e) { console.error('OTP email failed:', e.message); }
-  // Also send WhatsApp if phone exists
-  if (user.phone) {
-    try { await sendOTPWhatsApp(user.phone, user.name, otp); } catch (e) { console.error('OTP WhatsApp failed:', e.message); }
-  }
+// ── Helper: set cookie + send JSON ───────────────────────────
+const sendTokenResponse = (user, statusCode, res) => {
+  const accessToken  = generateAccessToken(user._id);
+  const refreshToken = generateRefreshToken(user._id);
+
+  // ── Cookie settings — MUST allow cross-domain (Render → Vercel) ──
+  const isProd = process.env.NODE_ENV === 'production';
+  const cookieOptions = {
+    httpOnly: true,
+    secure:   isProd,          // HTTPS only in prod
+    sameSite: isProd ? 'none' : 'lax',  // 'none' allows cross-domain in prod
+    maxAge:   30 * 24 * 60 * 60 * 1000,
+  };
+
+  res.cookie('refreshToken', refreshToken, cookieOptions);
+  res.cookie('accessToken',  accessToken,  { ...cookieOptions, maxAge: 7 * 24 * 60 * 60 * 1000 });
+
+  res.status(statusCode).json({
+    success:     true,
+    accessToken,
+    user: {
+      _id:       user._id,
+      name:      user.name,
+      email:     user.email,
+      role:      user.role,
+      avatar:    user.avatar,
+      phone:     user.phone,
+      isVerified:user.isVerified,
+      addresses: user.addresses,
+    },
+  });
 };
 
-// ── Register ─────────────────────────────────────────────────
+// @desc    Register
 exports.register = async (req, res) => {
   try {
-    const { name, email, password, phone } = req.body;
-
-    // Phone is required if WhatsApp OTP desired
+    const { name, email, phone, password } = req.body;
     const existing = await User.findOne({ email });
-    if (existing) {
-      if (!existing.isVerified) {
-        const otp = existing.generateOTP();
-        await existing.save({ validateBeforeSave: false });
-        await dispatchOTP(existing, otp);
-        return res.status(200).json({
-          success: true,
-          message: phone
-            ? 'OTP resent to your email and WhatsApp.'
-            : 'OTP resent to your email.',
-          userId: existing._id,
-        });
-      }
-      return res.status(400).json({ success: false, message: 'Email already registered. Please login.' });
-    }
+    if (existing) return res.status(400).json({ success: false, message: 'Email already registered' });
 
-    const user = await User.create({ name, email, password, phone });
-    const otp  = user.generateOTP();
-    await user.save({ validateBeforeSave: false });
-    await dispatchOTP(user, otp);
+    const otp     = Math.floor(100000 + Math.random() * 900000).toString();
+    const otpExp  = new Date(Date.now() + 10 * 60 * 1000);
+    const user    = await User.create({ name, email, phone, password, otp, otpExpiry: otpExp });
 
-    const channel = user.phone ? 'email and WhatsApp' : 'email';
-    res.status(201).json({
-      success: true,
-      message: `Registration successful. OTP sent to your ${channel}.`,
-      userId: user._id,
-    });
+    await sendOTPEmail(email, name, otp);
+    res.status(201).json({ success: true, message: 'OTP sent to your email', email });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
 };
 
-// ── Verify OTP ───────────────────────────────────────────────
+// @desc    Verify OTP
 exports.verifyOTP = async (req, res) => {
   try {
-    const { userId, otp } = req.body;
-    const user = await User.findById(userId).select('+otp +otpExpiry');
+    const { email, otp } = req.body;
+    const user = await User.findOne({ email });
+    if (!user)                         return res.status(404).json({ success: false, message: 'User not found' });
+    if (user.otp !== otp)              return res.status(400).json({ success: false, message: 'Invalid OTP' });
+    if (user.otpExpiry < new Date())   return res.status(400).json({ success: false, message: 'OTP expired' });
 
-    if (!user)              return res.status(404).json({ success: false, message: 'User not found' });
-    if (user.otp !== otp)  return res.status(400).json({ success: false, message: 'Invalid OTP' });
-    if (new Date() > user.otpExpiry) return res.status(400).json({ success: false, message: 'OTP expired. Request a new one.' });
-
-    user.isVerified  = true;
-    user.otp         = undefined;
-    user.otpExpiry   = undefined;
-    await user.save({ validateBeforeSave: false });
+    user.isVerified = true;
+    user.otp        = undefined;
+    user.otpExpiry  = undefined;
+    await user.save();
 
     sendTokenResponse(user, 200, res);
   } catch (error) {
@@ -80,30 +73,21 @@ exports.verifyOTP = async (req, res) => {
   }
 };
 
-// ── Login ────────────────────────────────────────────────────
+// @desc    Login
 exports.login = async (req, res) => {
   try {
     const { email, password } = req.body;
-    if (!email || !password)
-      return res.status(400).json({ success: false, message: 'Please provide email and password' });
-
     const user = await User.findOne({ email }).select('+password');
     if (!user) return res.status(401).json({ success: false, message: 'Invalid email or password' });
 
-    if (!user.googleId && !(await user.comparePassword(password)))
+    if (user.googleId && !user.password)
+      return res.status(400).json({ success: false, message: 'Please login with Google' });
+
+    if (!(await user.comparePassword(password)))
       return res.status(401).json({ success: false, message: 'Invalid email or password' });
 
-    if (!user.isVerified) {
-      const otp = user.generateOTP();
-      await user.save({ validateBeforeSave: false });
-      await dispatchOTP(user, otp);
-      return res.status(403).json({
-        success: false,
-        message: 'Email not verified. OTP sent.',
-        userId: user._id,
-        requiresVerification: true,
-      });
-    }
+    if (!user.isVerified)
+      return res.status(403).json({ success: false, message: 'Please verify your email first' });
 
     sendTokenResponse(user, 200, res);
   } catch (error) {
@@ -111,121 +95,105 @@ exports.login = async (req, res) => {
   }
 };
 
-// ── Google OAuth callback ─────────────────────────────────────
-// FIX: Must REDIRECT to frontend — not return JSON.
-// The browser follows the OAuth redirect; returning JSON breaks the flow.
+// @desc    Google OAuth Callback
+// ── FIX: redirect to frontend with token in URL (not JSON) ───
+// Because Google redirects the browser, we can't send JSON.
+// We redirect to /auth/google/success?token=xxx on the frontend.
 exports.googleCallback = async (req, res) => {
   try {
     const user         = req.user;
     const accessToken  = generateAccessToken(user._id);
     const refreshToken = generateRefreshToken(user._id);
 
-    // sameSite MUST be 'lax' for OAuth cross-site redirects (not 'strict')
-    const cookieBase = {
+    const isProd = process.env.NODE_ENV === 'production';
+    const cookieOptions = {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',  // ← KEY FIX: 'strict' breaks cross-site OAuth
+      secure:   isProd,
+      sameSite: isProd ? 'none' : 'lax',
+      maxAge:   30 * 24 * 60 * 60 * 1000,
     };
+    res.cookie('refreshToken', refreshToken, cookieOptions);
 
-    res.cookie('refreshToken', refreshToken, { ...cookieBase, maxAge: 30 * 24 * 60 * 60 * 1000 });
-    res.cookie('accessToken',  accessToken,  { ...cookieBase, maxAge:  7 * 24 * 60 * 60 * 1000 });
-
-    // Redirect frontend to a handler page with the token in URL
-    // The frontend page reads the token and calls /api/auth/me
-    res.redirect(`${process.env.CLIENT_URL}/auth/google/success?token=${accessToken}`);
+    // Redirect to frontend — token in URL param
+    const clientUrl = process.env.CLIENT_URL || 'http://localhost:3000';
+    res.redirect(`${clientUrl}/auth/google/success?token=${accessToken}`);
   } catch (error) {
-    console.error('Google callback error:', error);
-    res.redirect(`${process.env.CLIENT_URL}/login?error=google_auth_failed`);
+    const clientUrl = process.env.CLIENT_URL || 'http://localhost:3000';
+    res.redirect(`${clientUrl}/login?error=google_auth_failed`);
   }
 };
 
-// ── Forgot Password ───────────────────────────────────────────
+// @desc    Forgot password
 exports.forgotPassword = async (req, res) => {
   try {
     const { email } = req.body;
     const user = await User.findOne({ email });
-
-    if (!user)
-      return res.status(200).json({ success: true, message: 'If this email exists, a reset link has been sent.' });
+    if (!user) return res.status(200).json({ success: true, message: 'If this email exists, a reset link has been sent.' });
 
     const resetToken = user.generateResetToken();
     await user.save({ validateBeforeSave: false });
 
     const resetUrl = `${process.env.CLIENT_URL}/reset-password/${resetToken}`;
-
-    // Send email
-    try { await sendPasswordResetEmail(email, user.name, resetUrl); } catch (e) { console.error('Reset email failed:', e.message); }
-
-    // Also send WhatsApp OTP if phone exists
-    if (user.phone) {
-      const otp = user.generateOTP();
-      await user.save({ validateBeforeSave: false });
-      try { await sendPasswordResetWhatsApp(user.phone, user.name, otp); } catch (e) { console.error('Reset WA failed:', e.message); }
-    }
-
+    await sendPasswordResetEmail(email, user.name, resetUrl);
     res.status(200).json({ success: true, message: 'Password reset link sent to your email.' });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
 };
 
-// ── Reset Password ────────────────────────────────────────────
+// @desc    Reset password
 exports.resetPassword = async (req, res) => {
   try {
-    const hashedToken = crypto.createHash('sha256').update(req.params.token).digest('hex');
+    const resetTokenHash = crypto.createHash('sha256').update(req.params.token).digest('hex');
     const user = await User.findOne({
-      resetPasswordToken: hashedToken,
+      resetPasswordToken:   resetTokenHash,
       resetPasswordExpiry: { $gt: Date.now() },
-    }).select('+resetPasswordToken +resetPasswordExpiry');
-
-    if (!user)
-      return res.status(400).json({ success: false, message: 'Invalid or expired reset token' });
+    });
+    if (!user) return res.status(400).json({ success: false, message: 'Invalid or expired reset token' });
 
     user.password            = req.body.password;
     user.resetPasswordToken  = undefined;
     user.resetPasswordExpiry = undefined;
     await user.save();
 
-    res.status(200).json({ success: true, message: 'Password reset successful. Please login.' });
+    sendTokenResponse(user, 200, res);
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
 };
 
-// ── Refresh Token ─────────────────────────────────────────────
+// @desc    Refresh token
 exports.refreshToken = async (req, res) => {
   try {
-    const { refreshToken } = req.cookies;
-    if (!refreshToken)
-      return res.status(401).json({ success: false, message: 'No refresh token' });
+    const token = req.cookies.refreshToken;
+    if (!token) return res.status(401).json({ success: false, message: 'No refresh token' });
 
-    const decoded = jwt.verify(refreshToken, process.env.REFRESH_TOKEN_SECRET);
+    const jwt  = require('jsonwebtoken');
+    const decoded = jwt.verify(token, process.env.REFRESH_TOKEN_SECRET);
     const user    = await User.findById(decoded.id);
     if (!user) return res.status(401).json({ success: false, message: 'User not found' });
 
     const accessToken = generateAccessToken(user._id);
-    res.cookie('accessToken', accessToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      maxAge: 7 * 24 * 60 * 60 * 1000,
-    });
+    localStorage && localStorage.setItem('accessToken', accessToken);
     res.status(200).json({ success: true, accessToken });
   } catch (error) {
-    res.status(401).json({ success: false, message: 'Invalid refresh token' });
+    res.status(401).json({ success: false, message: 'Invalid refresh token', code: 'TOKEN_EXPIRED' });
   }
 };
 
-// ── Logout ────────────────────────────────────────────────────
-exports.logout = (req, res) => {
-  res.cookie('accessToken',  '', { expires: new Date(0), httpOnly: true });
-  res.cookie('refreshToken', '', { expires: new Date(0), httpOnly: true });
-  res.status(200).json({ success: true, message: 'Logged out successfully' });
+// @desc    Logout
+exports.logout = async (req, res) => {
+  res.clearCookie('refreshToken');
+  res.clearCookie('accessToken');
+  res.status(200).json({ success: true, message: 'Logged out' });
 };
 
-// ── Get Me ────────────────────────────────────────────────────
+// @desc    Get current user
 exports.getMe = async (req, res) => {
-  const user = await User.findById(req.user._id)
-    .populate('wishlist', 'name images price discountPrice');
-  res.status(200).json({ success: true, user });
+  try {
+    const user = await User.findById(req.user._id).populate('wishlist', 'name images price discountPrice rating');
+    res.status(200).json({ success: true, user });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
 };

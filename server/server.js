@@ -1,160 +1,104 @@
-const express        = require('express');
-const mongoose       = require('mongoose');
-const cors           = require('cors');
-const helmet         = require('helmet');
-const morgan         = require('morgan');
-const cookieParser   = require('cookie-parser');
-const mongoSanitize  = require('express-mongo-sanitize');
-const rateLimit      = require('express-rate-limit');
-const compression    = require('compression');       // ← gzip all responses
-const passport       = require('passport');
+const express = require('express');
+const mongoose = require('mongoose');
+const path = require('path');
+const cors = require('cors');
+const helmet = require('helmet');
+const morgan = require('morgan');
+const cookieParser = require('cookie-parser');
+const mongoSanitize = require('express-mongo-sanitize');
+const rateLimit = require('express-rate-limit');
+const passport = require('passport');
+require('dotenv').config({ path: path.resolve(__dirname, '../.env') });
 require('dotenv').config();
 require('./config/passport');
 
-const authRoutes    = require('./routes/authRoutes');
-const userRoutes    = require('./routes/userRoutes');
+const authRoutes = require('./routes/authRoutes');
+const userRoutes = require('./routes/userRoutes');
 const productRoutes = require('./routes/productRoutes');
-const cartRoutes    = require('./routes/cartRoutes');
-const orderRoutes   = require('./routes/orderRoutes');
+const cartRoutes = require('./routes/cartRoutes');
+const orderRoutes = require('./routes/orderRoutes');
 const paymentRoutes = require('./routes/paymentRoutes');
-const adminRoutes   = require('./routes/adminRoutes');
-const contactRoutes = require('./routes/contactRoutes');
+const adminRoutes = require('./routes/adminRoutes');
 const { errorHandler, notFound } = require('./middleware/errorMiddleware');
 
 const app = express();
 
-// ── COMPRESSION — reduces response size up to 70% ─────────────
-app.use(compression({ level: 6, threshold: 1024 }));
-
-// ── SECURITY ──────────────────────────────────────────────────
-app.use(helmet({ crossOriginResourcePolicy: false }));
+// ─── Security Middleware ────────────────────────────────────
+app.use(helmet());
 app.use(mongoSanitize());
 
-// ── RATE LIMITING — prevents abuse + protects free tier ───────
-const globalLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,   // 15 min window
-  max: 200,                    // ↑ increased from 100 (real users need more)
-  standardHeaders: true,
-  legacyHeaders: false,
-  message: { success: false, message: 'Too many requests. Please try again later.' },
-  skip: (req) => req.path === '/api/health',   // never rate-limit health checks
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100,
+  message: { success: false, message: 'Too many requests, please try again later.' }
 });
-app.use('/api/', globalLimiter);
+app.use('/api/', limiter);
 
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 20,
-  message: { success: false, message: 'Too many auth attempts. Try again in 15 minutes.' },
+  message: { success: false, message: 'Too many auth attempts, please try again after 15 minutes.' }
 });
 
-// ── CORS ───────────────────────────────────────────────────────
-const allowedOrigins = [
-  process.env.CLIENT_URL,
-  'http://localhost:3000',
-  /\.vercel\.app$/,
-].filter(Boolean);
-
+// ─── Core Middleware ────────────────────────────────────────
 app.use(cors({
   origin: (origin, cb) => {
-    if (!origin) return cb(null, true);   // allow curl/Postman
-    const allowed = allowedOrigins.some(o =>
-      typeof o === 'string' ? o === origin : o.test(origin)
-    );
-    cb(allowed ? null : new Error('CORS blocked'), allowed);
+    const allowed = [
+      process.env.CLIENT_URL,
+      'http://localhost:3000',
+      'http://localhost:3001',
+    ].filter(Boolean);
+    // Allow all vercel.app preview deployments
+    if (!origin || allowed.includes(origin) || /\.vercel\.app$/.test(origin)) {
+      return cb(null, true);
+    }
+    cb(new Error(`CORS blocked: ${origin}`));
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
 }));
-
-// ── BODY PARSING ───────────────────────────────────────────────
-app.use(express.json({ limit: '5mb' }));
-app.use(express.urlencoded({ extended: true, limit: '5mb' }));
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use(cookieParser());
 app.use(passport.initialize());
 
-if (process.env.NODE_ENV === 'development') app.use(morgan('dev'));
+if (process.env.NODE_ENV === 'development') {
+  app.use(morgan('dev'));
+}
 
-// ── IN-MEMORY CACHE for products (simple, no Redis needed) ────
-// Products change rarely — cache for 2 minutes to drastically
-// reduce MongoDB calls and speed up page loads
-const cache = new Map();
-const CACHE_TTL = 2 * 60 * 1000;   // 2 minutes
+// ─── API Routes ─────────────────────────────────────────────
+app.use('/api/auth', authLimiter, authRoutes);
+app.use('/api/user', userRoutes);
+app.use('/api/products', productRoutes);
+app.use('/api/cart', cartRoutes);
+app.use('/api/orders', orderRoutes);
+app.use('/api/payment', paymentRoutes);
+app.use('/api/admin', adminRoutes);
 
-const withCache = (key) => (req, res, next) => {
-  const cacheKey = `${key}:${req.url}`;
-  const cached   = cache.get(cacheKey);
-  if (cached && Date.now() - cached.ts < CACHE_TTL) {
-    return res.json(cached.data);
-  }
-  // Intercept res.json to store in cache
-  const originalJson = res.json.bind(res);
-  res.json = (data) => {
-    if (res.statusCode === 200) cache.set(cacheKey, { data, ts: Date.now() });
-    return originalJson(data);
-  };
-  next();
-};
+// Contact form (optional — only if file exists)
+try {
+  const contactRoutes = require('./routes/contactRoutes');
+  app.use('/api/contact', contactRoutes);
+} catch {}
 
-// ── API ROUTES ─────────────────────────────────────────────────
-app.use('/api/auth',     authLimiter, authRoutes);
-app.use('/api/user',     userRoutes);
-app.use('/api/products', withCache('products'), productRoutes); // ← cached
-app.use('/api/cart',     cartRoutes);
-app.use('/api/orders',   orderRoutes);
-app.use('/api/payment',  paymentRoutes);
-app.use('/api/admin',    adminRoutes);
-app.use('/api/contact',  contactRoutes);
+app.get('/api/health', (req, res) => res.json({ status: 'OK', message: 'Server is running', uptime: Math.floor(process.uptime()) }));
 
-// ── HEALTH CHECK — always fast ─────────────────────────────────
-app.get('/api/health', (req, res) => res.json({
-  status:   'OK',
-  uptime:   Math.floor(process.uptime()),
-  memory:   `${Math.round(process.memoryUsage().heapUsed / 1024 / 1024)}MB`,
-  env:      process.env.NODE_ENV,
-}));
-
-// ── ERROR HANDLING ─────────────────────────────────────────────
+// ─── Error Handling ──────────────────────────────────────────
 app.use(notFound);
 app.use(errorHandler);
 
-// ── DATABASE ───────────────────────────────────────────────────
-const MONGO_OPTS = {
-  maxPoolSize:        10,   // max concurrent connections
-  serverSelectionTimeoutMS: 5000,
-  socketTimeoutMS:    45000,
-};
+// ─── Database & Server Start ─────────────────────────────────
+const PORT = process.env.PORT || 5000;
 
-mongoose.connect(process.env.MONGO_URI, MONGO_OPTS)
+mongoose.connect(process.env.MONGO_URI)
   .then(() => {
-    console.log('✅ MongoDB connected');
-    const PORT = process.env.PORT || 5000;
-    const server = app.listen(PORT, () => console.log(`🚀 Server on port ${PORT}`));
-
-    // Keep HTTP connections alive — reduces TCP handshake overhead
-    server.keepAliveTimeout = 65000;
-    server.headersTimeout   = 66000;
-
-    // ── Keep-alive ping for Render free tier (prevents 50s cold start) ──
-    if (process.env.NODE_ENV === 'production') {
-      const https = require('https');
-      setInterval(() => {
-        const url = process.env.BACKEND_URL || 'https://greenroots-backend.onrender.com';
-        try {
-          https.get(`${url}/api/health`, r => console.log(`🏓 Keep-alive: ${r.statusCode}`));
-        } catch {}
-      }, 14 * 60 * 1000);   // every 14 minutes
-    }
+    console.log('✅ MongoDB connected successfully');
+    app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
   })
-  .catch(err => {
-    console.error('❌ MongoDB failed:', err.message);
+  .catch((err) => {
+    console.error('❌ MongoDB connection failed:', err.message);
     process.exit(1);
   });
-
-// ── GRACEFUL SHUTDOWN ─────────────────────────────────────────
-process.on('SIGTERM', () => {
-  console.log('SIGTERM received — closing gracefully');
-  mongoose.connection.close(false, () => process.exit(0));
-});
 
 module.exports = app;
