@@ -28,6 +28,7 @@ const Register = lazy(() => import('./pages/auth/Register'));
 const OtpVerify = lazy(() => import('./pages/auth/OtpVerify'));
 const ForgotPassword = lazy(() => import('./pages/auth/ForgotPassword'));
 const ResetPassword = lazy(() => import('./pages/auth/ResetPassword'));
+const GoogleSuccess = lazy(() => import('./pages/auth/GoogleSuccess'));
 const AdminDashboard = lazy(() => import('./pages/admin/Dashboard'));
 const AdminProducts = lazy(() => import('./pages/admin/Products'));
 const AdminOrders = lazy(() => import('./pages/admin/Orders'));
@@ -85,6 +86,8 @@ function App() {
             <Route path="/verify-otp" element={<OtpVerify />} />
             <Route path="/forgot-password" element={<AuthRoute><ForgotPassword /></AuthRoute>} />
             <Route path="/reset-password/:token" element={<ResetPassword />} />
+            <Route path="/auth/google/success" element={<GoogleSuccess />} />
+            <Route path="/auth/google/success/*" element={<GoogleSuccess />} />
 
             {/* Admin routes */}
             <Route path="/admin/*" element={<AdminRoute><AdminLayout /></AdminRoute>} />
