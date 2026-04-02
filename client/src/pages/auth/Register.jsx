@@ -5,6 +5,7 @@ import { motion } from 'framer-motion';
 import { Helmet } from 'react-helmet-async';
 import { Eye, EyeOff, Mail, Lock, User, Phone, Leaf, Loader2, ShieldCheck, Truck, Gift, Users } from 'lucide-react';
 import { registerUser } from '../../redux/slices/authSlice';
+import BackNav from '../../components/common/BackNav';
 
 const features = [
   { Icon: Leaf,       text: '100% Organic Certified Products' },
@@ -108,6 +109,9 @@ const Register = () => {
         {/* Right panel */}
         <div style={{ flex:1, display:'flex', alignItems:'center', justifyContent:'center', padding:'40px 20px', background:'#f8fff4', overflowY:'auto' }}>
           <motion.div initial={{ x:40,opacity:0 }} animate={{ x:0,opacity:1 }} transition={{ duration:0.5 }} style={{ width:'100%', maxWidth:'420px' }}>
+            <div style={{ marginBottom: '14px' }}>
+              <BackNav label="Back" fallback="/" />
+            </div>
             <div style={{ marginBottom:'28px', textAlign:'center' }}>
               <h2 style={{ fontSize:'1.8rem', fontFamily:'Playfair Display,serif', color:'#1B1B1B' }}>Create Account</h2>
               <p style={{ color:'#6B7280', marginTop:'6px', fontSize:'0.9rem' }}>Join our organic community</p>

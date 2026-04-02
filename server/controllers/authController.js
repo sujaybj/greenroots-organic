@@ -116,7 +116,7 @@ exports.googleCallback = async (req, res) => {
 
     // Redirect to frontend — token in URL param
     const clientUrl = process.env.CLIENT_URL || 'http://localhost:3000';
-    res.redirect(`${clientUrl}/auth/google/success?token=${accessToken}`);
+    res.redirect(`${clientUrl}/login?google_token=${accessToken}`);
   } catch (error) {
     const clientUrl = process.env.CLIENT_URL || 'http://localhost:3000';
     res.redirect(`${clientUrl}/login?error=google_auth_failed`);
@@ -168,13 +168,12 @@ exports.refreshToken = async (req, res) => {
     const token = req.cookies.refreshToken;
     if (!token) return res.status(401).json({ success: false, message: 'No refresh token' });
 
-    const jwt  = require('jsonwebtoken');
+    const jwt = require('jsonwebtoken');
     const decoded = jwt.verify(token, process.env.REFRESH_TOKEN_SECRET);
     const user    = await User.findById(decoded.id);
     if (!user) return res.status(401).json({ success: false, message: 'User not found' });
 
     const accessToken = generateAccessToken(user._id);
-    localStorage && localStorage.setItem('accessToken', accessToken);
     res.status(200).json({ success: true, accessToken });
   } catch (error) {
     res.status(401).json({ success: false, message: 'Invalid refresh token', code: 'TOKEN_EXPIRED' });

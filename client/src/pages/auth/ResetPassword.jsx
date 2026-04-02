@@ -5,6 +5,7 @@ import { Helmet } from 'react-helmet-async';
 import { ArrowLeft, CheckCircle2, Eye, EyeOff, Loader2, LockKeyhole } from 'lucide-react';
 import API from '../../utils/api';
 import toast from 'react-hot-toast';
+import BackNav from '../../components/common/BackNav';
 
 const ResetPassword = () => {
   const { token } = useParams();
@@ -34,6 +35,9 @@ const ResetPassword = () => {
       <Helmet><title>Reset Password - GreenRoots</title></Helmet>
       <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(135deg, #f8fff4 0%, #d1fae5 100%)', padding: '20px' }}>
         <motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} style={{ background: 'white', borderRadius: '20px', padding: '40px', maxWidth: '420px', width: '100%', boxShadow: '0 20px 60px rgba(0,0,0,0.12)' }}>
+          <div style={{ marginBottom: '12px' }}>
+            <BackNav label="Back" fallback="/login" />
+          </div>
           <div style={{ textAlign: 'center', marginBottom: '28px' }}>
             <div style={{ marginBottom: '12px', display: 'flex', justifyContent: 'center' }}>
               <div style={{ width: '60px', height: '60px', borderRadius: '50%', background: '#ECFDF3', display: 'grid', placeItems: 'center' }}>

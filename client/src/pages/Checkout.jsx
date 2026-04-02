@@ -6,6 +6,7 @@ import { MapPin, CreditCard, Banknote, Loader2, ShieldCheck, Check } from 'lucid
 import { selectCartItems, selectCartSubtotal, selectCartTotal, selectCartDiscount, clearCart } from '../redux/slices/cartSlice';
 import API from '../utils/api';
 import toast from 'react-hot-toast';
+import BackNav from '../components/common/BackNav';
 
 const Checkout = () => {
   const navigate = useNavigate();
@@ -96,6 +97,9 @@ const Checkout = () => {
     <>
       <Helmet><title>Checkout - GreenRoots</title></Helmet>
       <div className="container" style={{ paddingTop: '32px', paddingBottom: '64px', maxWidth: '900px' }}>
+        <div style={{ marginBottom: '10px' }}>
+          <BackNav label="Back" fallback="/cart" />
+        </div>
         <h1 style={{ fontSize: '2rem', marginBottom: '32px' }}>Checkout</h1>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '0', marginBottom: '40px' }}>

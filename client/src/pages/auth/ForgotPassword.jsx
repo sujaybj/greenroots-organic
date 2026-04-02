@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Helmet } from 'react-helmet-async';
 import { ArrowLeft, KeyRound, Loader2, MailCheck } from 'lucide-react';
+import BackNav from '../../components/common/BackNav';
 import API from '../../utils/api';
 import toast from 'react-hot-toast';
 
@@ -30,6 +31,9 @@ export const ForgotPassword = () => {
       <Helmet><title>Forgot Password - GreenRoots</title></Helmet>
       <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(135deg, #f8fff4 0%, #d1fae5 100%)', padding: '20px' }}>
         <motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} style={{ background: 'white', borderRadius: '20px', padding: '40px', maxWidth: '420px', width: '100%', boxShadow: '0 20px 60px rgba(0,0,0,0.12)', textAlign: 'center' }}>
+          <div style={{ textAlign: 'left', marginBottom: '12px' }}>
+            <BackNav label="Back" fallback="/login" />
+          </div>
           {!sent ? (
             <>
               <div style={{ marginBottom: '16px', display: 'flex', justifyContent: 'center' }}>

@@ -5,6 +5,7 @@ import { motion } from 'framer-motion';
 import { CheckCircle2, Loader2, Mail } from 'lucide-react';
 import { verifyOTP } from '../../redux/slices/authSlice';
 import toast from 'react-hot-toast';
+import BackNav from '../../components/common/BackNav';
 
 export const OtpVerify = () => {
   const dispatch = useDispatch();
@@ -49,6 +50,9 @@ export const OtpVerify = () => {
   return (
     <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(135deg, #f8fff4 0%, #d1fae5 100%)', padding: '20px' }}>
       <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} style={{ background: 'white', borderRadius: '20px', padding: '40px', maxWidth: '420px', width: '100%', boxShadow: '0 20px 60px rgba(0,0,0,0.12)', textAlign: 'center' }}>
+        <div style={{ textAlign: 'left', marginBottom: '12px' }}>
+          <BackNav label="Back" fallback="/register" />
+        </div>
         <div style={{ marginBottom: '16px', display: 'flex', justifyContent: 'center' }}>
           <div style={{ width: '60px', height: '60px', borderRadius: '50%', background: '#ECFDF3', display: 'grid', placeItems: 'center' }}>
             <Mail size={30} color="#2D6A4F" />

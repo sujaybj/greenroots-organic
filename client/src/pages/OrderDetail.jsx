@@ -1,5 +1,5 @@
 ﻿import React, { useState, useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useSearchParams } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -154,6 +154,7 @@ const ReturnModal = ({ onClose, onSubmit, loading }) => {
 
 const OrderDetail = () => {
   const { id } = useParams();
+  const [searchParams] = useSearchParams();
   const [order, setOrder] = useState(null);
   const [loading, setLoading] = useState(true);
   const [showCancel, setShowCancel] = useState(false);
@@ -164,6 +165,13 @@ const OrderDetail = () => {
   useEffect(() => {
     API.get(`/orders/${id}`).then(({ data }) => setOrder(data.order)).catch(() => {}).finally(() => setLoading(false));
   }, [id]);
+
+  useEffect(() => {
+    if (!order) return;
+    if (searchParams.get('action') === 'return' && order.orderStatus === 'delivered') {
+      setShowReturn(true);
+    }
+  }, [order, searchParams]);
 
   const handleCancel = async (reason) => {
     setCancelling(true);
@@ -206,7 +214,8 @@ const OrderDetail = () => {
   const codCancelBlocked = order.paymentMethod === 'cod' && midDelivery;
   const canCancel = ['placed', 'confirmed', 'packed', 'shipped', 'outForDelivery'].includes(order.orderStatus) && !codCancelBlocked;
 
-  const canRequestReturn = order.orderStatus === 'delivered' && (!order.returnRequest || order.returnRequest.status !== 'pending');
+  const hasPendingReturn = order.returnRequest?.status === 'pending';
+  const canRequestReturn = order.orderStatus === 'delivered' && !hasPendingReturn;
 
   return (
     <>
@@ -236,6 +245,12 @@ const OrderDetail = () => {
               <button onClick={() => setShowReturn(true)}
                 style={{ padding: '7px 14px', background: '#E6F8EC', color: '#166534', border: '1px solid #A7F3D0', borderRadius: '8px', fontWeight: 600, cursor: 'pointer', fontFamily: 'Inter,sans-serif', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '5px' }}>
                 <RotateCcw size={13}/> Return / Refund / Replacement
+              </button>
+            )}
+            {order.orderStatus === 'delivered' && hasPendingReturn && (
+              <button disabled
+                style={{ padding: '7px 14px', background: '#F3F4F6', color: '#6B7280', border: '1px solid #E5E7EB', borderRadius: '8px', fontWeight: 600, cursor: 'not-allowed', fontFamily: 'Inter,sans-serif', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                <RotateCcw size={13}/> Return Request Pending
               </button>
             )}
           </div>

@@ -7,6 +7,7 @@ import { useDispatch } from 'react-redux';
 import { clearCart } from '../redux/slices/cartSlice';
 import API from '../utils/api';
 import Loader from '../components/common/Loader';
+import BackNav from '../components/common/BackNav';
 
 export const OrderSuccess = () => {
   const { id } = useParams();
@@ -36,6 +37,9 @@ export const OrderSuccess = () => {
       <div style={{ minHeight: '70vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '40px 20px' }}>
         <motion.div initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
           style={{ background: 'white', borderRadius: '20px', padding: '48px', maxWidth: '500px', width: '100%', textAlign: 'center', boxShadow: '0 20px 60px rgba(0,0,0,0.12)' }}>
+          <div style={{ textAlign: 'left', marginBottom: '10px' }}>
+            <BackNav label="Back" fallback="/orders" />
+          </div>
           <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ delay: 0.3, type: 'spring', stiffness: 200 }}>
             <div style={{ width: '80px', height: '80px', background: '#D1FAE5', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 24px' }}>
               <CheckCircle2 size={42} color="#059669" />

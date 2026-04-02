@@ -11,6 +11,7 @@ import {
 } from '../redux/slices/cartSlice';
 import API from '../utils/api';
 import toast from 'react-hot-toast';
+import BackNav from '../components/common/BackNav';
 
 // All available coupons shown in the UI (same as seeded)
 const AVAILABLE_COUPONS = [
@@ -78,6 +79,9 @@ const Cart = () => {
     <>
       <Helmet><title>My Cart - GreenRoots Organics</title></Helmet>
       <div className="container" style={{ paddingTop: '32px', paddingBottom: '64px' }}>
+        <div style={{ marginBottom: '10px' }}>
+          <BackNav label="Back" fallback="/products" />
+        </div>
         <h1 style={{ fontSize: '1.8rem', marginBottom: '28px' }}>
           My Cart <span style={{ fontSize: '1rem', color: '#6B7280', fontFamily: 'Inter, sans-serif', fontWeight: 400 }}>({items.length} {items.length === 1 ? 'item' : 'items'})</span>
         </h1>

@@ -6,6 +6,7 @@ import { Search, SlidersHorizontal, X, Leaf } from 'lucide-react';
 import { fetchProducts } from '../redux/slices/productSlice';
 import ProductCard from '../components/product/ProductCard';
 import Loader from '../components/common/Loader';
+import BackNav from '../components/common/BackNav';
 
 const CATEGORIES = ['All', 'Vegetables', 'Fruits', 'Dairy', 'Grains', 'Pulses', 'Spices', 'Oils', 'Beverages', 'Skincare'];
 const SORT_OPTIONS = [
@@ -49,6 +50,9 @@ const Products = () => {
     <>
       <Helmet><title>Shop Organic Products - GreenRoots</title></Helmet>
       <div className="container" style={{ paddingTop: '24px', paddingBottom: '48px' }}>
+        <div style={{ marginBottom: '10px' }}>
+          <BackNav label="Back" fallback="/" />
+        </div>
         <div style={{ marginBottom: '20px' }}>
           <h1 style={{ fontSize: 'clamp(1.4rem,4vw,2rem)' }}>Organic Products</h1>
           <p style={{ color: '#6B7280', marginTop: '4px', fontSize: '0.88rem' }}>{total} products found</p>

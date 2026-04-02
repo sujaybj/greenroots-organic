@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { motion } from 'framer-motion';
 import { Helmet } from 'react-helmet-async';
 import { Eye, EyeOff, Mail, Lock, Leaf, Loader2, ShieldCheck, Truck, Users } from 'lucide-react';
-import { loginUser } from '../../redux/slices/authSlice';
+import { getMe, loginUser } from '../../redux/slices/authSlice';
+import BackNav from '../../components/common/BackNav';
 
 const GoogleIcon = () => (
   <svg width="18" height="18" viewBox="0 0 24 24" style={{ flexShrink: 0 }}>
@@ -33,6 +34,23 @@ const Login = () => {
   const [form, setForm]         = useState({ email: '', password: '' });
   const [showPass, setShowPass] = useState(false);
   const [errors, setErrors]     = useState({});
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const googleToken = params.get('google_token');
+    if (!googleToken) return;
+
+    localStorage.setItem('accessToken', googleToken);
+    dispatch(getMe())
+      .unwrap()
+      .then((payload) => {
+        const role = payload?.user?.role;
+        navigate(role === 'admin' ? '/admin' : '/', { replace: true });
+      })
+      .catch(() => {
+        localStorage.removeItem('accessToken');
+      });
+  }, [dispatch, location.search, navigate]);
 
   const validate = () => {
     const errs = {};
@@ -92,6 +110,9 @@ const Login = () => {
         {/* Right panel */}
         <div style={{ flex:1, display:'flex', alignItems:'center', justifyContent:'center', padding:'40px 20px', background:'#f8fff4' }}>
           <motion.div initial={{ x:40,opacity:0 }} animate={{ x:0,opacity:1 }} transition={{ duration:0.5 }} style={{ width:'100%', maxWidth:'420px' }}>
+            <div style={{ marginBottom: '14px' }}>
+              <BackNav label="Back" fallback="/" />
+            </div>
             <div style={{ marginBottom:'28px', textAlign:'center' }}>
               <h2 style={{ fontSize:'1.8rem', fontFamily:'Playfair Display,serif', color:'#1B1B1B' }}>Welcome back!</h2>
               <p style={{ color:'#6B7280', marginTop:'6px', fontSize:'0.9rem' }}>Sign in to your GreenRoots account</p>
