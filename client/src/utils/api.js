@@ -5,11 +5,12 @@ const explicitApiUrl = process.env.REACT_APP_API_URL;
 const host = window.location.hostname;
 const isLocalHost = host === 'localhost' || host === '127.0.0.1';
 const explicitIsLocalhost = explicitApiUrl?.includes('localhost') || explicitApiUrl?.includes('127.0.0.1');
+const defaultProdApi = 'https://greenroots-backend.onrender.com/api';
 
-// Never use localhost API URLs when frontend is hosted publicly.
-const API_BASE = !isLocalHost && explicitIsLocalhost
-  ? 'https://greenroots-backend.onrender.com/api'
-  : (explicitApiUrl || (isLocalHost ? '/api' : 'https://greenroots-backend.onrender.com/api'));
+// Local frontend should always prefer local backend/proxy to avoid accidental remote dependency.
+const API_BASE = isLocalHost
+  ? (explicitIsLocalhost ? explicitApiUrl : '/api')
+  : (!explicitApiUrl || explicitIsLocalhost ? defaultProdApi : explicitApiUrl);
 
 const API = axios.create({
   baseURL: API_BASE,

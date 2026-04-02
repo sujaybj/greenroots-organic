@@ -7,6 +7,7 @@ import { Eye, EyeOff, Mail, Lock, Leaf, Loader2, ShieldCheck, Truck, Users } fro
 import { getMe, loginUser } from '../../redux/slices/authSlice';
 import BackNav from '../../components/common/BackNav';
 import API from '../../utils/api';
+import toast from 'react-hot-toast';
 
 const GoogleIcon = () => (
   <svg width="18" height="18" viewBox="0 0 24 24" style={{ flexShrink: 0 }}>
@@ -18,6 +19,8 @@ const GoogleIcon = () => (
 );
 
 const resolveGoogleAuthUrl = () => {
+  const isLocalHost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+  if (isLocalHost) return '/api/auth/google';
   const base = API.defaults.baseURL || '/api';
   if (typeof base === 'string' && /^https?:\/\//.test(base)) return `${base}/auth/google`;
   return '/api/auth/google';
@@ -41,6 +44,12 @@ const Login = () => {
 
   useEffect(() => {
     const params = new URLSearchParams(location.search);
+    const error = params.get('error');
+    const reason = params.get('reason');
+    if (error === 'google_failed') {
+      const msg = reason ? `Google login failed: ${decodeURIComponent(reason)}` : 'Google login failed';
+      toast.error(msg);
+    }
     const googleToken = params.get('google_token');
     if (!googleToken) return;
 
