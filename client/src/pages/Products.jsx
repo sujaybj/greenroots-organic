@@ -8,7 +8,7 @@ import ProductCard from '../components/product/ProductCard';
 import Loader from '../components/common/Loader';
 import BackNav from '../components/common/BackNav';
 
-const CATEGORIES = ['All', 'Vegetables', 'Fruits', 'Dairy', 'Grains', 'Pulses', 'Spices', 'Oils', 'Beverages', 'Skincare'];
+const CATEGORIES = ['All', 'Vegetables', 'Fruits', 'Dairy', 'Grains', 'Pulses', 'Spices', 'Oils', 'Beverages', 'Skincare', 'Electronics', 'Household'];
 const SORT_OPTIONS = [
   { value: 'newest', label: 'Newest First' },
   { value: 'price-low', label: 'Price: Low to High' },

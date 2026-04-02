@@ -6,6 +6,7 @@ import { Helmet } from 'react-helmet-async';
 import { Eye, EyeOff, Mail, Lock, Leaf, Loader2, ShieldCheck, Truck, Users } from 'lucide-react';
 import { getMe, loginUser } from '../../redux/slices/authSlice';
 import BackNav from '../../components/common/BackNav';
+import API from '../../utils/api';
 
 const GoogleIcon = () => (
   <svg width="18" height="18" viewBox="0 0 24 24" style={{ flexShrink: 0 }}>
@@ -16,8 +17,11 @@ const GoogleIcon = () => (
   </svg>
 );
 
-const BACKEND = process.env.REACT_APP_API_URL?.replace('/api', '')
-  || (window.location.hostname === 'localhost' ? 'http://localhost:5000' : 'https://greenroots-backend.onrender.com');
+const resolveGoogleAuthUrl = () => {
+  const base = API.defaults.baseURL || '/api';
+  if (typeof base === 'string' && /^https?:\/\//.test(base)) return `${base}/auth/google`;
+  return '/api/auth/google';
+};
 
 const features = [
   { Icon: Leaf,       text: '500+ Certified Organic Products' },
@@ -76,7 +80,7 @@ const Login = () => {
   };
 
   const handleGoogle = () => {
-    window.location.href = `${BACKEND}/api/auth/google`;
+    window.location.href = resolveGoogleAuthUrl();
   };
 
   return (

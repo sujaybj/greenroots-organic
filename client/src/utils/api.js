@@ -1,21 +1,23 @@
 import axios from 'axios';
 import toast from 'react-hot-toast';
 
-// ── Auto-detect backend URL ───────────────────────────────────
-// In development: proxy via package.json ("proxy": "http://localhost:5000")
-// In production: direct URL to Render backend
-const BACKEND = window.location.hostname === 'localhost'
-  ? ''   // empty = use proxy from package.json
-  : 'https://greenroots-backend.onrender.com';
+const explicitApiUrl = process.env.REACT_APP_API_URL;
+const host = window.location.hostname;
+const isLocalHost = host === 'localhost' || host === '127.0.0.1';
+const explicitIsLocalhost = explicitApiUrl?.includes('localhost') || explicitApiUrl?.includes('127.0.0.1');
+
+// Never use localhost API URLs when frontend is hosted publicly.
+const API_BASE = !isLocalHost && explicitIsLocalhost
+  ? 'https://greenroots-backend.onrender.com/api'
+  : (explicitApiUrl || (isLocalHost ? '/api' : 'https://greenroots-backend.onrender.com/api'));
 
 const API = axios.create({
-  baseURL:         `${BACKEND}/api`,
+  baseURL: API_BASE,
   withCredentials: true,
-  headers:         { 'Content-Type': 'application/json' },
-  timeout:         30000,  // 30s timeout
+  headers: { 'Content-Type': 'application/json' },
+  timeout: 30000,
 });
 
-// ── Request: attach Bearer token ─────────────────────────────
 API.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('accessToken');
@@ -25,12 +27,11 @@ API.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
-// ── Response: handle 401 with silent token refresh ───────────
 let isRefreshing = false;
-let failedQueue  = [];
+let failedQueue = [];
 
 const processQueue = (error, token = null) => {
-  failedQueue.forEach(p => error ? p.reject(error) : p.resolve(token));
+  failedQueue.forEach((p) => (error ? p.reject(error) : p.resolve(token)));
   failedQueue = [];
 };
 
@@ -39,22 +40,22 @@ API.interceptors.response.use(
   async (error) => {
     const original = error.config;
 
-    // Token expired — try refresh
-    if (error.response?.status === 401 &&
-        error.response?.data?.code === 'TOKEN_EXPIRED' &&
-        !original._retry) {
-
+    if (
+      error.response?.status === 401 &&
+      error.response?.data?.code === 'TOKEN_EXPIRED' &&
+      !original._retry
+    ) {
       if (isRefreshing) {
         return new Promise((resolve, reject) => {
           failedQueue.push({ resolve, reject });
-        }).then(token => {
+        }).then((token) => {
           original.headers.Authorization = `Bearer ${token}`;
           return API(original);
         });
       }
 
       original._retry = true;
-      isRefreshing    = true;
+      isRefreshing = true;
 
       try {
         const { data } = await API.post('/auth/refresh-token');
@@ -72,7 +73,6 @@ API.interceptors.response.use(
       }
     }
 
-    // Show toast for non-auth errors
     const msg = error.response?.data?.message;
     if (msg && error.response?.status !== 401) toast.error(msg);
 
