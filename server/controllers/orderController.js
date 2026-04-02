@@ -1,17 +1,29 @@
-const Order   = require('../models/Order');
+﻿const Order = require('../models/Order');
 const Product = require('../models/Product');
 
-// ── Cancellation fee rules (% of order total deducted) ────────
 const CANCEL_FEE = {
-  placed:         0,    // Free cancel
-  confirmed:      0,    // Free cancel
-  packed:         5,    // 5% fee
-  shipped:        10,   // 10% fee
-  outForDelivery: 15,   // 15% fee — mid-delivery
+  placed: 0,
+  confirmed: 0,
+  packed: 5,
+  shipped: 10,
+  outForDelivery: 15,
 };
 
-// @desc    Create order
-// @route   POST /api/orders/create
+const STATE_MULTIPLIER = {
+  Karnataka: 1,
+  Maharashtra: 1.05,
+  Delhi: 1.05,
+  'Tamil Nadu': 1.03,
+  Telangana: 1.03,
+  Kerala: 1.04,
+  'Uttar Pradesh': 1.08,
+  Rajasthan: 1.08,
+  default: 1.1,
+};
+
+const BLOCK_COD_CANCEL_STATUSES = new Set(['packed', 'shipped', 'outForDelivery']);
+const RETURN_TYPES = new Set(['return', 'refund', 'replacement']);
+
 exports.createOrder = async (req, res) => {
   try {
     const { items, shippingAddress, paymentMethod, couponCode } = req.body;
@@ -21,15 +33,17 @@ exports.createOrder = async (req, res) => {
 
     for (const item of items) {
       const product = await Product.findById(item.product);
-      if (!product) return res.status(404).json({ success: false, message: `Product not found: ${item.product}` });
+      if (!product) {
+        return res.status(404).json({ success: false, message: `Product not found: ${item.product}` });
+      }
 
-      // ── Stock check ──────────────────────────────────────
       if (product.stock < item.quantity) {
         return res.status(400).json({
           success: false,
           message: `Insufficient stock for "${product.name}". Available: ${product.stock}`,
         });
       }
+
       if (product.stock === 0) {
         return res.status(400).json({ success: false, message: `"${product.name}" is out of stock.` });
       }
@@ -37,19 +51,17 @@ exports.createOrder = async (req, res) => {
       const price = product.discountPrice || product.price;
       itemsPrice += price * item.quantity;
       orderItems.push({
-        product:  product._id,
-        name:     product.name,
-        image:    product.images?.[0]?.url || '',
+        product: product._id,
+        name: product.name,
+        image: product.images?.[0]?.url || '',
         price,
         quantity: item.quantity,
-        unit:     product.unit,
+        unit: product.unit,
       });
 
-      // ── Deduct stock immediately ─────────────────────────
       await Product.findByIdAndUpdate(item.product, { $inc: { stock: -item.quantity } });
     }
 
-    // Coupon
     let discountAmount = 0;
     if (couponCode) {
       const Coupon = require('../models/Coupon');
@@ -62,15 +74,22 @@ exports.createOrder = async (req, res) => {
     }
 
     const shippingPrice = itemsPrice > 500 ? 0 : 50;
-    const taxPrice      = 0;   // GST included in price — not shown separately
-    const totalAmount   = itemsPrice + shippingPrice - discountAmount;
+    const taxPrice = 0;
+    const totalAmount = itemsPrice + shippingPrice - discountAmount;
 
     const order = await Order.create({
-      user: req.user._id, items: orderItems, shippingAddress,
-      paymentMethod, itemsPrice, shippingPrice, taxPrice,
-      discountAmount, totalAmount, couponCode,
+      user: req.user._id,
+      items: orderItems,
+      shippingAddress,
+      paymentMethod,
+      itemsPrice,
+      shippingPrice,
+      taxPrice,
+      discountAmount,
+      totalAmount,
+      couponCode,
       orderStatus: 'placed',
-      paymentStatus: paymentMethod === 'cod' ? 'pending' : 'pending',
+      paymentStatus: 'pending',
       statusHistory: [{ status: 'placed', note: 'Order placed successfully', timestamp: new Date() }],
     });
 
@@ -80,7 +99,6 @@ exports.createOrder = async (req, res) => {
   }
 };
 
-// @desc    Get user orders
 exports.getUserOrders = async (req, res) => {
   try {
     const orders = await Order.find({ user: req.user._id }).sort({ createdAt: -1 });
@@ -90,42 +108,55 @@ exports.getUserOrders = async (req, res) => {
   }
 };
 
-// @desc    Get single order
 exports.getOrderById = async (req, res) => {
   try {
     const order = await Order.findById(req.params.id).populate('user', 'name email phone');
     if (!order) return res.status(404).json({ success: false, message: 'Order not found' });
-    if (order.user._id.toString() !== req.user._id.toString() && req.user.role !== 'admin')
+
+    if (order.user._id.toString() !== req.user._id.toString() && req.user.role !== 'admin') {
       return res.status(403).json({ success: false, message: 'Not authorized' });
+    }
+
     res.status(200).json({ success: true, order });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
 };
 
-// @desc    Cancel order — with restock + cancellation fee for mid-delivery
-// @route   PUT /api/orders/:id/cancel
 exports.cancelOrder = async (req, res) => {
   try {
     const order = await Order.findById(req.params.id);
     if (!order) return res.status(404).json({ success: false, message: 'Order not found' });
-    if (order.user.toString() !== req.user._id.toString())
+
+    if (order.user.toString() !== req.user._id.toString()) {
       return res.status(403).json({ success: false, message: 'Not authorized' });
+    }
 
-    // Already cancelled or delivered
-    if (['cancelled', 'delivered', 'returned'].includes(order.orderStatus))
+    if (['cancelled', 'delivered', 'returned'].includes(order.orderStatus)) {
       return res.status(400).json({ success: false, message: `Order is already ${order.orderStatus}` });
+    }
 
-    const reason       = req.body.reason || 'Cancelled by user';
-    const feePercent   = CANCEL_FEE[order.orderStatus] || 0;
-    const cancelFee    = feePercent > 0 ? Math.round(order.totalAmount * feePercent / 100) : 0;
+    if (order.paymentMethod === 'cod' && BLOCK_COD_CANCEL_STATUSES.has(order.orderStatus)) {
+      return res.status(400).json({
+        success: false,
+        message: 'COD orders cannot be cancelled after packing. Please request return/refund/replacement after delivery.',
+      });
+    }
+
+    const reason = req.body.reason || 'Cancelled by user';
+    const basePercent = CANCEL_FEE[order.orderStatus] || 0;
+    const state = order.shippingAddress?.state;
+    const stateMultiplier = STATE_MULTIPLIER[state] || STATE_MULTIPLIER.default;
+    const feePercent = Math.round(basePercent * stateMultiplier * 10) / 10;
+    const cancelFee = feePercent > 0 ? Math.round(order.totalAmount * feePercent / 100) : 0;
     const refundAmount = order.totalAmount - cancelFee;
 
-    order.orderStatus  = 'cancelled';
-    order.cancelledAt  = new Date();
+    order.orderStatus = 'cancelled';
+    order.cancelledAt = new Date();
     order.cancelReason = reason;
-    order.cancelFee    = cancelFee;
+    order.cancelFee = cancelFee;
     order.refundAmount = refundAmount;
+
     order.statusHistory.push({
       status: 'cancelled',
       note: cancelFee > 0
@@ -134,7 +165,6 @@ exports.cancelOrder = async (req, res) => {
       timestamp: new Date(),
     });
 
-    // ── AUTO RESTOCK ─────────────────────────────────────
     for (const item of order.items) {
       await Product.findByIdAndUpdate(item.product, { $inc: { stock: item.quantity } });
     }
@@ -147,6 +177,7 @@ exports.cancelOrder = async (req, res) => {
       cancelFee,
       refundAmount,
       feePercent,
+      stateMultiplier,
       order,
     });
   } catch (error) {
@@ -154,8 +185,6 @@ exports.cancelOrder = async (req, res) => {
   }
 };
 
-// @desc    Admin - Update order status
-// @route   PUT /api/admin/orders/:id/status
 exports.updateOrderStatus = async (req, res) => {
   try {
     const { status, trackingId, note, deliveryAgent } = req.body;
@@ -163,7 +192,7 @@ exports.updateOrderStatus = async (req, res) => {
     if (!order) return res.status(404).json({ success: false, message: 'Order not found' });
 
     order.orderStatus = status;
-    if (trackingId)    order.trackingId    = trackingId;
+    if (trackingId) order.trackingId = trackingId;
     if (deliveryAgent) order.deliveryAgent = deliveryAgent;
     if (status === 'delivered') order.deliveredAt = new Date();
     order.statusHistory.push({ status, note: note || `Order ${status}`, timestamp: new Date() });
@@ -175,40 +204,63 @@ exports.updateOrderStatus = async (req, res) => {
   }
 };
 
-// @desc    Admin - Get all orders
 exports.getAllOrders = async (req, res) => {
   try {
-    const { page=1, limit=20, status, paymentStatus } = req.query;
+    const { page = 1, limit = 20, status, paymentStatus } = req.query;
     const query = {};
-    if (status)        query.orderStatus   = status;
+    if (status) query.orderStatus = status;
     if (paymentStatus) query.paymentStatus = paymentStatus;
-    const skip = (Number(page)-1) * Number(limit);
+    const skip = (Number(page) - 1) * Number(limit);
+
     const [orders, total] = await Promise.all([
-      Order.find(query).populate('user','name email').sort({ createdAt: -1 }).skip(skip).limit(Number(limit)),
+      Order.find(query).populate('user', 'name email').sort({ createdAt: -1 }).skip(skip).limit(Number(limit)),
       Order.countDocuments(query),
     ]);
-    res.status(200).json({ success: true, orders, total, pages: Math.ceil(total/Number(limit)) });
+
+    res.status(200).json({ success: true, orders, total, pages: Math.ceil(total / Number(limit)) });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
 };
 
-// @desc    Request return / exchange / refund
 exports.requestReturn = async (req, res) => {
   try {
     const { type, reason, description } = req.body;
     const order = await Order.findById(req.params.id);
+
     if (!order) return res.status(404).json({ success: false, message: 'Order not found' });
-    if (order.user.toString() !== req.user._id.toString())
+    if (order.user.toString() !== req.user._id.toString()) {
       return res.status(403).json({ success: false, message: 'Not authorized' });
-    if (order.orderStatus !== 'delivered')
-      return res.status(400).json({ success: false, message: 'Return can only be requested for delivered orders' });
-    if (!type)   return res.status(400).json({ success: false, message: 'Request type is required' });
-    if (!reason) return res.status(400).json({ success: false, message: 'Reason is required' });
-    order.returnRequest = { type, reason, description, status: 'pending', requestedAt: new Date() };
-    order.statusHistory.push({ status: 'returned', note: type + ' requested: ' + reason, timestamp: new Date() });
+    }
+    if (order.orderStatus !== 'delivered') {
+      return res.status(400).json({ success: false, message: 'Request allowed only after delivery' });
+    }
+    if (!type || !RETURN_TYPES.has(type)) {
+      return res.status(400).json({ success: false, message: 'Type must be return, refund, or replacement' });
+    }
+    if (!reason) {
+      return res.status(400).json({ success: false, message: 'Reason is required' });
+    }
+    if (order.returnRequest?.status === 'pending') {
+      return res.status(400).json({ success: false, message: 'A request is already pending for this order' });
+    }
+
+    order.returnRequest = {
+      type,
+      reason,
+      description,
+      status: 'pending',
+      requestedAt: new Date(),
+    };
+
+    order.statusHistory.push({
+      status: 'returned',
+      note: `${type} requested: ${reason}`,
+      timestamp: new Date(),
+    });
+
     await order.save();
-    res.status(200).json({ success: true, message: type + ' request submitted', order });
+    res.status(200).json({ success: true, message: `${type} request submitted`, order });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }

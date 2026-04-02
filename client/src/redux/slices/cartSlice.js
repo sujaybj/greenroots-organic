@@ -26,7 +26,7 @@ const cartSlice = createSlice({
           stock: product.stock,
           quantity,
         });
-        toast.success(`${product.name} added to cart 🛒`);
+        toast.success(`${product.name} added to cart`);
       }
     },
     removeFromCart: (state, action) => {

@@ -1,13 +1,13 @@
-// NotFound.jsx
-import React from 'react';
+﻿import React from 'react';
 import { Link } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
+import { Leaf } from 'lucide-react';
 
 const NotFound = () => (
   <>
     <Helmet><title>404 - Page Not Found</title></Helmet>
     <div style={{ minHeight: '70vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '16px', padding: '40px', textAlign: 'center' }}>
-      <div style={{ fontSize: '80px' }}>🍃</div>
+      <Leaf size={70} color="#2D6A4F" />
       <h1 style={{ fontSize: '3rem', color: '#2D6A4F' }}>404</h1>
       <h2 style={{ fontSize: '1.5rem', color: '#374151' }}>Page Not Found</h2>
       <p style={{ color: '#9CA3AF', maxWidth: '400px' }}>Oops! This page seems to have wandered off into the forest. Let's get you back on track.</p>

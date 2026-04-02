@@ -153,7 +153,7 @@ const AgentCard = ({ agent, onEdit, onDelete, busy }) => {
 
       {agent.notes && (
         <div style={{ background: '#FFFBEB', border: '1px solid #FEF3C7', borderRadius: '8px', padding: '8px 10px', marginBottom: '12px' }}>
-          <p style={{ fontSize: '0.72rem', color: '#92400E', margin: 0, lineHeight: 1.5 }}>📋 {agent.notes}</p>
+          <p style={{ fontSize: '0.72rem', color: '#92400E', margin: 0, lineHeight: 1.5 }}>Notes: {agent.notes}</p>
         </div>
       )}
 
@@ -345,3 +345,5 @@ const AdminDeliveryAgents = () => {
 <AdminDeliveryAgents />
 
 export default AdminDeliveryAgents;
+
+

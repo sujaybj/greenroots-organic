@@ -196,7 +196,7 @@ const Navbar = () => {
                 type="text"
                 value={searchQuery}
                 onChange={e => setSearchQuery(e.target.value)}
-                placeholder={listening ? '🎤 Listening...' : 'Search products...'}
+                placeholder={listening ? 'Listening...' : 'Search products...'}
                 style={{ width: '100%', padding: '10px 48px 10px 40px', border: `1.5px solid ${listening ? '#E11D48' : '#E5E7EB'}`, borderRadius: '9px', fontSize: '0.92rem', outline: 'none', fontFamily: 'Inter,sans-serif', boxSizing: 'border-box', transition: 'border-color 0.2s', background: listening ? '#FFF5F5' : 'white' }}
               />
               {voiceSupport && (
@@ -245,3 +245,5 @@ const Navbar = () => {
 };
 
 export default Navbar;
+
+

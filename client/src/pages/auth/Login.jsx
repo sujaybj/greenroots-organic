@@ -15,7 +15,7 @@ const GoogleIcon = () => (
   </svg>
 );
 
-const BACKEND = import.meta.env.VITE_API_URL?.replace('/api', '')
+const BACKEND = process.env.REACT_APP_API_URL?.replace('/api', '')
   || (window.location.hostname === 'localhost' ? 'http://localhost:5000' : 'https://greenroots-backend.onrender.com');
 
 const features = [
@@ -97,13 +97,6 @@ const Login = () => {
               <p style={{ color:'#6B7280', marginTop:'6px', fontSize:'0.9rem' }}>Sign in to your GreenRoots account</p>
             </div>
 
-            {/* Google button FIRST */}
-            <button onClick={handleGoogle} style={{ width:'100%', display:'flex', alignItems:'center', justifyContent:'center', gap:'10px', padding:'12px 20px', borderRadius:'10px', border:'1.5px solid #E5E7EB', background:'white', color:'#374151', fontWeight:600, fontSize:'0.93rem', cursor:'pointer', marginBottom:'20px', transition:'all 0.2s' }}
-              onMouseOver={e => e.currentTarget.style.boxShadow='0 2px 10px rgba(0,0,0,0.1)'}
-              onMouseOut={e => e.currentTarget.style.boxShadow='none'}>
-              <GoogleIcon/> Continue with Google
-            </button>
-
             <div style={{ display:'flex', alignItems:'center', gap:'12px', marginBottom:'20px' }}>
               <div style={{ flex:1, height:'1px', background:'#E5E7EB' }}/>
               <span style={{ color:'#9CA3AF', fontSize:'0.82rem' }}>or sign in with email</span>
@@ -147,6 +140,18 @@ const Login = () => {
                 {loading ? <><Loader2 size={17} style={{ animation:'spin 1s linear infinite' }}/> Signing in...</> : 'Sign In'}
               </button>
             </form>
+
+            <div style={{ display:'flex', alignItems:'center', gap:'12px', marginTop:'18px', marginBottom:'12px' }}>
+              <div style={{ flex:1, height:'1px', background:'#E5E7EB' }}/>
+              <span style={{ color:'#9CA3AF', fontSize:'0.82rem' }}>or continue with</span>
+              <div style={{ flex:1, height:'1px', background:'#E5E7EB' }}/>
+            </div>
+
+            <button onClick={handleGoogle} style={{ width:'100%', display:'flex', alignItems:'center', justifyContent:'center', gap:'10px', padding:'12px 20px', borderRadius:'10px', border:'1.5px solid #E5E7EB', background:'white', color:'#374151', fontWeight:600, fontSize:'0.93rem', cursor:'pointer', marginBottom:'12px', transition:'all 0.2s' }}
+              onMouseOver={e => e.currentTarget.style.boxShadow='0 2px 10px rgba(0,0,0,0.1)'}
+              onMouseOut={e => e.currentTarget.style.boxShadow='none'}>
+              <GoogleIcon/> Continue with Google
+            </button>
 
             <p style={{ textAlign:'center', marginTop:'24px', color:'#6B7280', fontSize:'0.88rem' }}>
               Don't have an account?{' '}

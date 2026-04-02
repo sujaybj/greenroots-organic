@@ -58,6 +58,15 @@ const orderSchema = new mongoose.Schema({
     phone: String,
     vehicleNo: String,
   },
+  returnRequest: {
+    type: { type: String, enum: ['return', 'refund', 'replacement'] },
+    reason: String,
+    description: String,
+    status: { type: String, enum: ['pending', 'approved', 'rejected', 'completed'], default: 'pending' },
+    requestedAt: Date,
+    reviewedAt: Date,
+    adminNote: String,
+  },
 }, { timestamps: true });
 
 module.exports = mongoose.model('Order', orderSchema);

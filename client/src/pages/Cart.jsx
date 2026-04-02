@@ -259,7 +259,7 @@ const Cart = () => {
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.9rem', color: '#374151' }}>
                 <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><FaTruck style={{ color: '#9CA3AF', fontSize: '0.8rem' }} /> Delivery</span>
                 <span style={{ fontWeight: 600, color: shipping === 0 ? '#22C55E' : '#374151' }}>
-                  {shipping === 0 ? '🎉 FREE' : `₹${shipping}`}
+                  {shipping === 0 ? 'FREE' : `₹${shipping}`}
                 </span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.9rem', color: '#374151' }}>
@@ -281,7 +281,7 @@ const Cart = () => {
               {discount > 0 && (
                 <div style={{ background: '#D1FAE5', borderRadius: '6px', padding: '8px 12px', textAlign: 'center' }}>
                   <span style={{ fontSize: '0.82rem', fontWeight: 700, color: '#065F46' }}>
-                    🎉 You're saving ₹{discount} on this order!
+                    Great! You're saving ₹{discount} on this order!
                   </span>
                 </div>
               )}
@@ -316,3 +316,4 @@ const Cart = () => {
 };
 
 export default Cart;
+

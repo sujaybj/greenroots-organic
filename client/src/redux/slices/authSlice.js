@@ -102,7 +102,7 @@ const authSlice = createSlice({
         state.loading = false; state.user = action.payload.user;
         state.accessToken = action.payload.accessToken; state.isAuthenticated = true;
         state.pendingUserId = null;
-        toast.success('Verified! Welcome to GreenRoots 🌿');
+        toast.success('Verified! Welcome to GreenRoots');
       })
       .addCase(verifyOTP.rejected,  (state, action) => { state.loading = false; state.error = action.payload; toast.error(action.payload); })
 
@@ -111,7 +111,7 @@ const authSlice = createSlice({
       .addCase(loginUser.fulfilled, (state, action) => {
         state.loading = false; state.user = action.payload.user;
         state.accessToken = action.payload.accessToken; state.isAuthenticated = true;
-        toast.success(`Welcome back, ${action.payload.user.name.split(' ')[0]}! 🌿`);
+        toast.success(`Welcome back, ${action.payload.user.name.split(' ')[0]}!`);
       })
       .addCase(loginUser.rejected,  (state, action) => {
         state.loading = false;

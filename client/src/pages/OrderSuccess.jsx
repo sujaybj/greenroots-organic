@@ -1,8 +1,8 @@
-// OrderSuccess.jsx
-import React, { useEffect, useState } from 'react';
+﻿import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Helmet } from 'react-helmet-async';
+import { CheckCircle2 } from 'lucide-react';
 import { useDispatch } from 'react-redux';
 import { clearCart } from '../redux/slices/cartSlice';
 import API from '../utils/api';
@@ -20,7 +20,10 @@ export const OrderSuccess = () => {
       try {
         const { data } = await API.get(`/orders/${id}`);
         setOrder(data.order);
-      } catch {} finally { setLoading(false); }
+      } catch {
+      } finally {
+        setLoading(false);
+      }
     };
     fetchOrder();
   }, [id, dispatch]);
@@ -31,12 +34,15 @@ export const OrderSuccess = () => {
     <>
       <Helmet><title>Order Confirmed! - GreenRoots</title></Helmet>
       <div style={{ minHeight: '70vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '40px 20px' }}>
-        <motion.div initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} style={{ background: 'white', borderRadius: '20px', padding: '48px', maxWidth: '500px', width: '100%', textAlign: 'center', boxShadow: '0 20px 60px rgba(0,0,0,0.12)' }}>
+        <motion.div initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
+          style={{ background: 'white', borderRadius: '20px', padding: '48px', maxWidth: '500px', width: '100%', textAlign: 'center', boxShadow: '0 20px 60px rgba(0,0,0,0.12)' }}>
           <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ delay: 0.3, type: 'spring', stiffness: 200 }}>
-            <div style={{ width: '80px', height: '80px', background: '#D1FAE5', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 24px', fontSize: '2.5rem' }}>✅</div>
+            <div style={{ width: '80px', height: '80px', background: '#D1FAE5', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 24px' }}>
+              <CheckCircle2 size={42} color="#059669" />
+            </div>
           </motion.div>
           <h1 style={{ fontSize: '1.8rem', color: '#1B1B1B', marginBottom: '8px' }}>Order Confirmed!</h1>
-          <p style={{ color: '#6B7280', marginBottom: '24px' }}>Your organic goodness is on its way 🌿</p>
+          <p style={{ color: '#6B7280', marginBottom: '24px' }}>Your organic order is on its way.</p>
           {order && (
             <div style={{ background: '#F9FAFB', borderRadius: '12px', padding: '20px', marginBottom: '24px', textAlign: 'left' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>

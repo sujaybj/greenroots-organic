@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   MapPin, Globe, Check, X, Plus, Search,
-  Loader2, ChevronDown, ChevronUp, ToggleLeft, ToggleRight, Package,
+  Loader2, ChevronDown, ChevronUp, ToggleLeft, ToggleRight, ImagePlus, Save,
 } from 'lucide-react';
 import API from '../../utils/api';
 import toast from 'react-hot-toast';
@@ -14,6 +14,7 @@ const STATES = [
   'Rajasthan','Sikkim','Tamil Nadu','Telangana','Tripura','Uttar Pradesh',
   'Uttarakhand','West Bengal','Delhi','Jammu & Kashmir','Ladakh',
 ];
+const CATEGORIES = ['Vegetables', 'Fruits', 'Dairy', 'Grains', 'Pulses', 'Spices', 'Oils', 'Beverages', 'Skincare', 'Electronics', 'Household', 'Other'];
 
 const inputStyle = { width: '100%', padding: '8px 10px', border: '1.5px solid #E5E7EB', borderRadius: '7px', fontSize: '0.83rem', fontFamily: 'Inter,sans-serif', outline: 'none', boxSizing: 'border-box' };
 
@@ -232,6 +233,12 @@ const AdminProducts = () => {
   const [search,     setSearch]     = useState('');
   const [expandedId, setExpandedId] = useState(null);
   const [showBulk,   setShowBulk]   = useState(false);
+  const [showCreate, setShowCreate] = useState(false);
+  const [creating,   setCreating]   = useState(false);
+  const [newProduct, setNewProduct] = useState({
+    name: '', description: '', category: 'Vegetables', price: '', discountPrice: '', stock: '0', unit: 'piece',
+  });
+  const [newImages, setNewImages] = useState([]);
 
   const load = async () => {
     setLoading(true);
@@ -243,6 +250,36 @@ const AdminProducts = () => {
   };
 
   useEffect(() => { load(); }, []);
+
+  const createProduct = async (e) => {
+    e.preventDefault();
+    if (!newProduct.name.trim() || !newProduct.description.trim()) {
+      toast.error('Name and description are required');
+      return;
+    }
+    if (!newProduct.price || Number(newProduct.price) <= 0) {
+      toast.error('Enter a valid price');
+      return;
+    }
+    setCreating(true);
+    try {
+      const formData = new FormData();
+      Object.entries(newProduct).forEach(([k, v]) => formData.append(k, v));
+      newImages.forEach(file => formData.append('images', file));
+      const { data } = await API.post('/products', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+      setProducts(ps => [data.product, ...ps]);
+      setNewProduct({ name: '', description: '', category: 'Vegetables', price: '', discountPrice: '', stock: '0', unit: 'piece' });
+      setNewImages([]);
+      setShowCreate(false);
+      toast.success('Product added successfully');
+    } catch (error) {
+      toast.error(error?.response?.data?.message || 'Failed to create product');
+    } finally {
+      setCreating(false);
+    }
+  };
 
   const filtered = products.filter(p =>
     p.name.toLowerCase().includes(search.toLowerCase()) ||
@@ -271,6 +308,10 @@ const AdminProducts = () => {
           <p style={{ color:'#9CA3AF', fontSize:'0.78rem', margin:'3px 0 0' }}>{products.length} products</p>
         </div>
         <div style={{ display:'flex', gap:'8px', flexWrap:'wrap' }}>
+          <button onClick={() => setShowCreate(v => !v)}
+            style={{ display:'flex', alignItems:'center', gap:'6px', padding:'8px 14px', background: showCreate?'#1F2937':'#2D6A4F', color:'white', border:'none', borderRadius:'8px', fontWeight:700, cursor:'pointer', fontFamily:'Inter,sans-serif', fontSize:'0.83rem' }}>
+            <Plus size={13}/> {showCreate ? 'Close Add Form' : 'Add Product'}
+          </button>
           <div style={{ display:'flex', alignItems:'center', gap:'7px', background:'white', border:'1.5px solid #E5E7EB', borderRadius:'8px', padding:'7px 11px' }}>
             <Search size={13} color="#9CA3AF"/>
             <input placeholder="Search..." value={search} onChange={e => setSearch(e.target.value)}
@@ -282,6 +323,38 @@ const AdminProducts = () => {
           </button>
         </div>
       </div>
+
+      <AnimatePresence>
+        {showCreate && (
+          <motion.form initial={{ opacity:0, y:-10 }} animate={{ opacity:1, y:0 }} exit={{ opacity:0, y:-10 }} onSubmit={createProduct}
+            style={{ background:'white', borderRadius:'14px', border:'1px solid #E5E7EB', padding:'16px', marginBottom:'16px', boxShadow:'0 2px 8px rgba(0,0,0,0.05)' }}>
+            <h3 style={{ margin:'0 0 12px', fontSize:'0.95rem', color:'#1B4332', display:'flex', alignItems:'center', gap:'8px' }}>
+              <ImagePlus size={16} color="#2D6A4F" /> New Product
+            </h3>
+            <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(180px,1fr))', gap:'10px', marginBottom:'10px' }}>
+              <input style={inputStyle} placeholder="Product name *" value={newProduct.name} onChange={e => setNewProduct(p => ({ ...p, name: e.target.value }))} />
+              <select style={inputStyle} value={newProduct.category} onChange={e => setNewProduct(p => ({ ...p, category: e.target.value }))}>
+                {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+              </select>
+              <input style={inputStyle} type="number" min="1" placeholder="Price *" value={newProduct.price} onChange={e => setNewProduct(p => ({ ...p, price: e.target.value }))} />
+              <input style={inputStyle} type="number" min="0" placeholder="Discount Price" value={newProduct.discountPrice} onChange={e => setNewProduct(p => ({ ...p, discountPrice: e.target.value }))} />
+              <input style={inputStyle} type="number" min="0" placeholder="Stock" value={newProduct.stock} onChange={e => setNewProduct(p => ({ ...p, stock: e.target.value }))} />
+              <select style={inputStyle} value={newProduct.unit} onChange={e => setNewProduct(p => ({ ...p, unit: e.target.value }))}>
+                {['kg', 'g', 'litre', 'ml', 'piece', 'pack', 'dozen'].map(u => <option key={u} value={u}>{u}</option>)}
+              </select>
+            </div>
+            <textarea style={{ ...inputStyle, minHeight:'85px', marginBottom:'10px', resize:'vertical' }} placeholder="Description *" value={newProduct.description} onChange={e => setNewProduct(p => ({ ...p, description: e.target.value }))} />
+            <div style={{ display:'flex', alignItems:'center', gap:'10px', flexWrap:'wrap' }}>
+              <input type="file" multiple accept="image/*" onChange={e => setNewImages(Array.from(e.target.files || []))} style={{ fontSize:'0.8rem' }} />
+              <span style={{ fontSize:'0.75rem', color:'#6B7280' }}>{newImages.length} image(s) selected</span>
+              <button type="submit" disabled={creating}
+                style={{ marginLeft:'auto', display:'inline-flex', alignItems:'center', gap:'6px', padding:'8px 14px', background:'#2D6A4F', color:'white', border:'none', borderRadius:'8px', fontWeight:700, cursor: creating ? 'not-allowed' : 'pointer', fontFamily:'Inter,sans-serif', fontSize:'0.82rem', opacity: creating ? 0.75 : 1 }}>
+                {creating ? <><Loader2 size={12} style={{ animation:'spin 1s linear infinite' }} /> Adding...</> : <><Save size={12} /> Save Product</>}
+              </button>
+            </div>
+          </motion.form>
+        )}
+      </AnimatePresence>
 
       {/* Bulk panel */}
       <AnimatePresence>

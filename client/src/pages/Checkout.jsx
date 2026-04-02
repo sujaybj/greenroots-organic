@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
+import { MapPin, CreditCard, Banknote, Loader2, ShieldCheck, Check } from 'lucide-react';
 import { selectCartItems, selectCartSubtotal, selectCartTotal, selectCartDiscount, clearCart } from '../redux/slices/cartSlice';
 import API from '../utils/api';
 import toast from 'react-hot-toast';
@@ -17,7 +18,6 @@ const Checkout = () => {
   const { user } = useSelector(state => state.auth);
 
   const shipping = subtotal > 500 ? 0 : 50;
-  
 
   const [address, setAddress] = useState({ fullName: user?.name || '', phone: user?.phone || '', street: '', city: '', state: '', pincode: '', country: 'India' });
   const [paymentMethod, setPaymentMethod] = useState('razorpay');
@@ -27,7 +27,6 @@ const Checkout = () => {
   const handlePlaceOrder = async () => {
     setLoading(true);
     try {
-      // Create order
       const { data } = await API.post('/orders/create', {
         items: items.map(i => ({ product: i.product, quantity: i.quantity })),
         shippingAddress: address,
@@ -37,7 +36,6 @@ const Checkout = () => {
       const orderId = data.order._id;
 
       if (paymentMethod === 'razorpay') {
-        // Create Razorpay order
         const { data: payData } = await API.post('/payment/create-order', { orderId });
 
         const options = {
@@ -63,25 +61,33 @@ const Checkout = () => {
               toast.error('Payment verification failed. Contact support.');
             }
           },
-          modal: { ondismiss: () => { setLoading(false); toast.error('Payment cancelled'); } },
+          modal: {
+            ondismiss: () => {
+              setLoading(false);
+              toast.error('Payment cancelled');
+            },
+          },
         };
 
         if (window.Razorpay) {
           const rzp = new window.Razorpay(options);
           rzp.open();
         } else {
-          // Load Razorpay script if not loaded
           const script = document.createElement('script');
           script.src = 'https://checkout.razorpay.com/v1/checkout.js';
-          script.onload = () => { const rzp = new window.Razorpay(options); rzp.open(); };
+          script.onload = () => {
+            const rzp = new window.Razorpay(options);
+            rzp.open();
+          };
           document.body.appendChild(script);
         }
       } else {
-        // COD
         dispatch(clearCart());
         navigate(`/order-success/${orderId}`);
       }
-    } catch { setLoading(false); }
+    } catch {
+      setLoading(false);
+    }
   };
 
   const steps = ['Address', 'Payment', 'Review'];
@@ -92,13 +98,12 @@ const Checkout = () => {
       <div className="container" style={{ paddingTop: '32px', paddingBottom: '64px', maxWidth: '900px' }}>
         <h1 style={{ fontSize: '2rem', marginBottom: '32px' }}>Checkout</h1>
 
-        {/* Step Indicator */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '0', marginBottom: '40px' }}>
           {steps.map((s, i) => (
             <React.Fragment key={s}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <div style={{ width: '32px', height: '32px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '0.85rem', background: i + 1 <= step ? '#2D6A4F' : '#E5E7EB', color: i + 1 <= step ? 'white' : '#9CA3AF' }}>
-                  {i + 1 < step ? '✓' : i + 1}
+                  {i + 1 < step ? <Check size={14} /> : i + 1}
                 </div>
                 <span style={{ fontWeight: i + 1 === step ? 700 : 400, color: i + 1 <= step ? '#2D6A4F' : '#9CA3AF', fontSize: '0.9rem' }}>{s}</span>
               </div>
@@ -108,16 +113,16 @@ const Checkout = () => {
         </div>
 
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 320px', gap: '32px', alignItems: 'start' }}>
-          {/* Main Form */}
           <div style={{ background: 'white', borderRadius: '16px', padding: '28px', boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}>
             {step === 1 && (
               <>
                 <h3 style={{ fontFamily: 'Inter, sans-serif', fontWeight: 700, marginBottom: '20px' }}>Delivery Address</h3>
-
-                {/* Use current location */}
                 <button type="button"
                   onClick={() => {
-                    if (!navigator.geolocation) { toast.error('Location not supported by your browser'); return; }
+                    if (!navigator.geolocation) {
+                      toast.error('Location not supported by your browser');
+                      return;
+                    }
                     toast.loading('Detecting your location...');
                     navigator.geolocation.getCurrentPosition(
                       async (pos) => {
@@ -130,20 +135,23 @@ const Checkout = () => {
                           setAddress(a => ({
                             ...a,
                             street: [addr.road, addr.suburb, addr.neighbourhood].filter(Boolean).join(', ') || a.street,
-                            city:   addr.city || addr.town || addr.village || addr.county || a.city,
-                            state:  addr.state || a.state,
+                            city: addr.city || addr.town || addr.village || addr.county || a.city,
+                            state: addr.state || a.state,
                             pincode: addr.postcode || a.pincode,
                           }));
                           toast.success('Location detected! Please verify and complete.');
-                        } catch { toast.error('Could not fetch address. Please enter manually.'); }
+                        } catch {
+                          toast.error('Could not fetch address. Please enter manually.');
+                        }
                       },
-                      () => { toast.dismiss(); toast.error('Location permission denied.'); }
+                      () => {
+                        toast.dismiss();
+                        toast.error('Location permission denied.');
+                      }
                     );
                   }}
-                  style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 16px', background: '#F0FDF4', color: '#2D6A4F', border: '1.5px solid #D1FAE5', borderRadius: '9px', cursor: 'pointer', fontWeight: 600, fontSize: '0.85rem', fontFamily: 'Inter,sans-serif', marginBottom: '18px', width: '100%', justifyContent: 'center', transition: 'all 0.2s' }}
-                  onMouseOver={e => e.currentTarget.style.background='#D1FAE5'}
-                  onMouseOut={e => e.currentTarget.style.background='#F0FDF4'}>
-                  📍 Use My Current Location
+                  style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 16px', background: '#F0FDF4', color: '#2D6A4F', border: '1.5px solid #D1FAE5', borderRadius: '9px', cursor: 'pointer', fontWeight: 600, fontSize: '0.85rem', fontFamily: 'Inter,sans-serif', marginBottom: '18px', width: '100%', justifyContent: 'center' }}>
+                  <MapPin size={15} /> Use My Current Location
                 </button>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
                   {[['fullName', 'Full Name *', 'text', 'John Doe'], ['phone', 'Phone Number *', 'tel', '+91 9876543210']].map(([key, label, type, placeholder]) => (
@@ -166,19 +174,27 @@ const Checkout = () => {
                   ))}
                 </div>
                 <button onClick={() => {
-                  if (!address.fullName || !address.phone || !address.street || !address.city || !address.state || !address.pincode) { toast.error('Please fill all required fields'); return; }
+                  if (!address.fullName || !address.phone || !address.street || !address.city || !address.state || !address.pincode) {
+                    toast.error('Please fill all required fields');
+                    return;
+                  }
                   setStep(2);
-                }} className="btn btn-primary btn-lg">Continue to Payment →</button>
+                }} className="btn btn-primary btn-lg">Continue to Payment</button>
               </>
             )}
 
             {step === 2 && (
               <>
                 <h3 style={{ fontFamily: 'Inter, sans-serif', fontWeight: 700, marginBottom: '20px' }}>Payment Method</h3>
-                {[['razorpay', '💳', 'Razorpay', 'Pay securely with UPI, Card, Net Banking, Wallet'], ['cod', '💵', 'Cash on Delivery', 'Pay when you receive your order']].map(([value, icon, label, desc]) => (
+                {[
+                  ['razorpay', CreditCard, 'Razorpay', 'Pay securely with UPI, Card, Net Banking, Wallet'],
+                  ['cod', Banknote, 'Cash on Delivery', 'Pay when you receive your order'],
+                ].map(([value, Icon, label, desc]) => (
                   <div key={value} onClick={() => setPaymentMethod(value)}
-                    style={{ display: 'flex', gap: '14px', padding: '16px', border: `2px solid ${paymentMethod === value ? '#2D6A4F' : '#E5E7EB'}`, borderRadius: '12px', marginBottom: '12px', cursor: 'pointer', background: paymentMethod === value ? '#F0FDF4' : 'white', transition: 'all 0.2s' }}>
-                    <span style={{ fontSize: '1.8rem' }}>{icon}</span>
+                    style={{ display: 'flex', gap: '14px', padding: '16px', border: `2px solid ${paymentMethod === value ? '#2D6A4F' : '#E5E7EB'}`, borderRadius: '12px', marginBottom: '12px', cursor: 'pointer', background: paymentMethod === value ? '#F0FDF4' : 'white' }}>
+                    <div style={{ width: 32, height: 32, borderRadius: 8, background: '#ECFDF5', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <Icon size={18} color="#2D6A4F" />
+                    </div>
                     <div>
                       <p style={{ fontWeight: 700 }}>{label}</p>
                       <p style={{ color: '#6B7280', fontSize: '0.85rem', marginTop: '3px' }}>{desc}</p>
@@ -189,8 +205,8 @@ const Checkout = () => {
                   </div>
                 ))}
                 <div style={{ display: 'flex', gap: '12px', marginTop: '20px' }}>
-                  <button onClick={() => setStep(1)} className="btn btn-outline">← Back</button>
-                  <button onClick={() => setStep(3)} className="btn btn-primary btn-lg" style={{ flex: 1 }}>Review Order →</button>
+                  <button onClick={() => setStep(1)} className="btn btn-outline">Back</button>
+                  <button onClick={() => setStep(3)} className="btn btn-primary btn-lg" style={{ flex: 1 }}>Review Order</button>
                 </div>
               </>
             )}
@@ -199,12 +215,12 @@ const Checkout = () => {
               <>
                 <h3 style={{ fontFamily: 'Inter, sans-serif', fontWeight: 700, marginBottom: '20px' }}>Review Your Order</h3>
                 <div style={{ background: '#F9FAFB', borderRadius: '10px', padding: '16px', marginBottom: '20px' }}>
-                  <h4 style={{ fontFamily: 'Inter, sans-serif', fontWeight: 600, marginBottom: '8px', fontSize: '0.9rem' }}>📍 Delivery Address</h4>
+                  <h4 style={{ fontFamily: 'Inter, sans-serif', fontWeight: 600, marginBottom: '8px', fontSize: '0.9rem', display: 'inline-flex', alignItems: 'center', gap: '6px' }}><MapPin size={14} /> Delivery Address</h4>
                   <p style={{ color: '#374151', fontSize: '0.9rem' }}>{address.fullName} • {address.phone}</p>
                   <p style={{ color: '#6B7280', fontSize: '0.88rem' }}>{address.street}, {address.city}, {address.state} - {address.pincode}</p>
                 </div>
                 <div style={{ background: '#F9FAFB', borderRadius: '10px', padding: '16px', marginBottom: '20px' }}>
-                  <h4 style={{ fontFamily: 'Inter, sans-serif', fontWeight: 600, marginBottom: '12px', fontSize: '0.9rem' }}>🛒 Order Items ({items.length})</h4>
+                  <h4 style={{ fontFamily: 'Inter, sans-serif', fontWeight: 600, marginBottom: '12px', fontSize: '0.9rem' }}>Order Items ({items.length})</h4>
                   {items.map(item => (
                     <div key={item.product} style={{ display: 'flex', gap: '12px', alignItems: 'center', marginBottom: '10px' }}>
                       <img src={item.image} alt={item.name} style={{ width: '48px', height: '48px', objectFit: 'cover', borderRadius: '6px' }} />
@@ -217,29 +233,28 @@ const Checkout = () => {
                   ))}
                 </div>
                 <div style={{ display: 'flex', gap: '12px' }}>
-                  <button onClick={() => setStep(2)} className="btn btn-outline">← Back</button>
-                  <button onClick={handlePlaceOrder} disabled={loading} className="btn btn-primary btn-lg" style={{ flex: 1, fontSize: '1rem' }}>
-                    {loading ? '⏳ Processing...' : paymentMethod === 'cod' ? '✓ Place Order' : '💳 Pay Now'}
+                  <button onClick={() => setStep(2)} className="btn btn-outline">Back</button>
+                  <button onClick={handlePlaceOrder} disabled={loading} className="btn btn-primary btn-lg" style={{ flex: 1, fontSize: '1rem', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '7px' }}>
+                    {loading ? <><Loader2 size={16} style={{ animation: 'spin 1s linear infinite' }} /> Processing...</> : paymentMethod === 'cod' ? <><Check size={15} /> Place Order</> : <><CreditCard size={15} /> Pay Now</>}
                   </button>
                 </div>
               </>
             )}
           </div>
 
-          {/* Order Summary */}
           <div style={{ background: 'white', borderRadius: '16px', padding: '24px', boxShadow: '0 2px 8px rgba(0,0,0,0.06)', position: 'sticky', top: '80px' }}>
             <h3 style={{ fontFamily: 'Inter, sans-serif', fontWeight: 700, marginBottom: '16px' }}>Order Summary</h3>
             {[['Subtotal (GST incl.)', `₹${subtotal}`], ['Shipping', shipping === 0 ? 'FREE' : `₹${shipping}`], ...(discount > 0 ? [['Discount', `-₹${discount}`]] : [])].map(([label, value]) => (
               <div key={label} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px', fontSize: '0.87rem', color: '#374151' }}>
-                <span>{label}</span><span style={{ color: value === 'FREE' || value.startsWith('-') ? '#22C55E' : 'inherit', fontWeight: 500 }}>{value}</span>
+                <span>{label}</span><span style={{ color: value === 'FREE' || String(value).startsWith('-') ? '#22C55E' : 'inherit', fontWeight: 500 }}>{value}</span>
               </div>
             ))}
             <div style={{ borderTop: '1.5px solid #E5E7EB', paddingTop: '12px', display: 'flex', justifyContent: 'space-between', fontWeight: 700, fontSize: '1.05rem', marginBottom: '6px' }}>
               <span>Total</span><span style={{ color: '#2D6A4F' }}>₹{total}</span>
             </div>
             <p style={{ fontSize: '0.7rem', color: '#9CA3AF', marginBottom: '12px' }}>* All prices include GST</p>
-            <div style={{ background: '#F0FDF4', borderRadius: '8px', padding: '12px', marginTop: '4px', textAlign: 'center' }}>
-              <p style={{ fontSize: '0.8rem', color: '#065F46' }}>🔒 Secured by SSL encryption</p>
+            <div style={{ background: '#F0FDF4', borderRadius: '8px', padding: '12px', marginTop: '4px', textAlign: 'center', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '6px', width: '100%', color: '#065F46', fontSize: '0.8rem' }}>
+              <ShieldCheck size={14} /> Secured by SSL encryption
             </div>
           </div>
         </div>
