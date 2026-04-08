@@ -8,7 +8,7 @@ export const fetchProducts = createAsyncThunk('product/fetchAll', async (params,
     const res = await API.get(`/products?${query}`);
     return res.data;
   } catch (err) {
-    return rejectWithValue(err.response?.data?.message);
+    return rejectWithValue(err.response?.data?.message || err.message || 'Failed to fetch products');
   }
 });
 
@@ -17,7 +17,7 @@ export const fetchProduct = createAsyncThunk('product/fetchOne', async (id, { re
     const res = await API.get(`/products/${id}`);
     return res.data;
   } catch (err) {
-    return rejectWithValue(err.response?.data?.message);
+    return rejectWithValue(err.response?.data?.message || err.message || 'Failed to fetch product');
   }
 });
 
@@ -26,7 +26,7 @@ export const fetchCategories = createAsyncThunk('product/fetchCategories', async
     const res = await API.get('/products/categories');
     return res.data;
   } catch (err) {
-    return rejectWithValue(err.response?.data?.message);
+    return rejectWithValue(err.response?.data?.message || err.message || 'Failed to fetch categories');
   }
 });
 
@@ -86,4 +86,3 @@ const productSlice = createSlice({
 
 export const { setFilters, clearCurrentProduct } = productSlice.actions;
 export default productSlice.reducer;
-

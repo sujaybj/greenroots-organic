@@ -20,7 +20,7 @@ const SORT_OPTIONS = [
 const Products = () => {
   const dispatch = useDispatch();
   const [searchParams, setSearchParams] = useSearchParams();
-  const { products, loading, total, pages } = useSelector(s => s.product);
+  const { products, loading, total, pages, error } = useSelector(s => s.product);
   const [localFilters, setLocalFilters] = useState({
     category: searchParams.get('category') || '',
     sort: 'newest',
@@ -115,6 +115,13 @@ const Products = () => {
 
         {loading ? (
           <div style={{ display: 'flex', justifyContent: 'center', padding: '80px 0' }}><Loader size={48} /></div>
+        ) : error ? (
+          <div style={{ textAlign: 'center', padding: '80px 20px' }}>
+            <Leaf size={56} color="#2D6A4F" style={{ marginBottom: '16px' }} />
+            <h3 style={{ color: '#374151' }}>Could not load products</h3>
+            <p style={{ color: '#9CA3AF', marginTop: '8px' }}>{error}</p>
+            <button onClick={() => applyFilters(localFilters)} className="btn btn-primary" style={{ marginTop: '16px' }}>Retry</button>
+          </div>
         ) : products.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '80px 20px' }}>
             <Leaf size={56} color="#2D6A4F" style={{ marginBottom: '16px' }} />

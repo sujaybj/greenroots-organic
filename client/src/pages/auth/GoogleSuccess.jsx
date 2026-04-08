@@ -2,7 +2,6 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useDispatch } from 'react-redux';
 import { Leaf, Loader2, CheckCircle, XCircle } from 'lucide-react';
-import API from '../../utils/api';
 import { getMe } from '../../redux/slices/authSlice';
 
 // ── This page handles the Google OAuth redirect ───────────────
@@ -31,20 +30,41 @@ const GoogleSuccess = () => {
     // Store token in localStorage (same as email login)
     localStorage.setItem('accessToken', token);
 
-    // Fetch user data using the token
-    dispatch(getMe())
-      .unwrap()
-      .then(() => {
+    let cancelled = false;
+
+    const finishGoogleLogin = async (attempt = 1) => {
+      try {
+        await dispatch(getMe()).unwrap();
+        if (cancelled) return;
         setStatus('success');
         setMessage('Login successful! Redirecting...');
         setTimeout(() => navigate('/'), 1200);
-      })
-      .catch(() => {
+      } catch (err) {
+        if (cancelled) return;
+
+        const status = err?.status || null;
+        const isRetryable = !status || status >= 500;
+
+        if (isRetryable && attempt < 3) {
+          setMessage(`Finalizing your login... (${attempt}/3)`);
+          setTimeout(() => {
+            finishGoogleLogin(attempt + 1);
+          }, 1500 * attempt);
+          return;
+        }
+
         setStatus('error');
-        setMessage('Could not fetch user data. Please login again.');
+        setMessage(err?.message || 'Could not fetch user data. Please login again.');
         localStorage.removeItem('accessToken');
         setTimeout(() => navigate('/login'), 2500);
-      });
+      }
+    };
+
+    finishGoogleLogin();
+
+    return () => {
+      cancelled = true;
+    };
   }, [params, navigate, dispatch]);
 
   return (

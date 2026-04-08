@@ -42,7 +42,11 @@ export const getMe = createAsyncThunk('auth/getMe', async (_, { rejectWithValue 
     const res = await API.get('/auth/me');
     return res.data;
   } catch (err) {
-    return rejectWithValue(err.response?.data?.message);
+    return rejectWithValue({
+      message: err.response?.data?.message || err.message || 'Failed to fetch user',
+      status: err.response?.status || null,
+      isNetworkError: !err.response,
+    });
   }
 });
 
@@ -139,12 +143,17 @@ const authSlice = createSlice({
   state.user = action.payload.user;
   state.isAuthenticated = true;
 })
-.addCase(getMe.rejected, (state) => {
+.addCase(getMe.rejected, (state, action) => {
   state.loading = false;
-  state.user = null;
-  state.isAuthenticated = false;
-  state.accessToken = null;
-  localStorage.removeItem('accessToken');
+  state.error = action.payload?.message || 'Failed to fetch user';
+
+  // Only clear auth state when the server explicitly says the token is invalid/unauthorized.
+  if (action.payload?.status === 401) {
+    state.user = null;
+    state.isAuthenticated = false;
+    state.accessToken = null;
+    localStorage.removeItem('accessToken');
+  }
 })
       // Update Profile
       .addCase(updateProfile.fulfilled, (state, action) => {

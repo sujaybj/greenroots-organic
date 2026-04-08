@@ -114,12 +114,12 @@ exports.googleCallback = async (req, res) => {
     };
     res.cookie('refreshToken', refreshToken, cookieOptions);
 
-    // Redirect to frontend — token in URL param
+    // Redirect to a dedicated success page so the frontend can complete auth robustly.
     const clientUrl = process.env.CLIENT_URL || 'http://localhost:3000';
-    res.redirect(`${clientUrl}/login?google_token=${accessToken}`);
+    res.redirect(`${clientUrl}/auth/google/success?token=${accessToken}`);
   } catch (error) {
     const clientUrl = process.env.CLIENT_URL || 'http://localhost:3000';
-    res.redirect(`${clientUrl}/login?error=google_auth_failed`);
+    res.redirect(`${clientUrl}/auth/google/success?error=google_auth_failed`);
   }
 };
 
