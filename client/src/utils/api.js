@@ -1,19 +1,30 @@
 import axios from 'axios';
 import toast from 'react-hot-toast';
 
-const explicitApiUrl = process.env.REACT_APP_API_URL;
+const rawApiUrl = process.env.REACT_APP_API_URL;
 const isDevelopment = process.env.NODE_ENV === 'development';
 const host = window.location.hostname;
 const isLocalHost = host === 'localhost' || host === '127.0.0.1' || host === '0.0.0.0';
-const explicitIsLocalhost =
-  explicitApiUrl?.includes('localhost') ||
-  explicitApiUrl?.includes('127.0.0.1') ||
-  explicitApiUrl?.includes('0.0.0.0');
 const defaultProdApi = 'https://greenroots-backend.onrender.com/api';
 
+const normalizeApiUrl = (value) => {
+  if (typeof value !== 'string') return '';
+
+  const trimmed = value.trim().replace(/^['"]|['"]$/g, '');
+  const extractedUrl = trimmed.match(/https?:\/\/[^\s'"]+|\/api\b/i)?.[0] || '';
+
+  if (!extractedUrl) return '';
+  return extractedUrl.replace(/\/+$/, '');
+};
+
+const explicitApiUrl = normalizeApiUrl(rawApiUrl);
+const explicitIsLocalhost =
+  explicitApiUrl.includes('localhost') ||
+  explicitApiUrl.includes('127.0.0.1') ||
+  explicitApiUrl.includes('0.0.0.0');
+
 const isExplicitSameOriginApi =
-  typeof explicitApiUrl === 'string' &&
-  (explicitApiUrl.startsWith('/api') || explicitApiUrl.includes(host));
+  explicitApiUrl.startsWith('/api') || explicitApiUrl.includes(host);
 
 // In local development, prefer the CRA proxy. Everywhere else, force the deployed backend.
 const API_BASE = (isDevelopment && isLocalHost)
@@ -30,6 +41,8 @@ const API = axios.create({
   headers: { 'Content-Type': 'application/json' },
   timeout: 30000,
 });
+
+export const API_BASE_URL = API_BASE;
 
 API.interceptors.request.use(
   (config) => {

@@ -6,7 +6,7 @@ import { Helmet } from 'react-helmet-async';
 import { Eye, EyeOff, Mail, Lock, Leaf, Loader2, ShieldCheck, Truck, Users } from 'lucide-react';
 import { getMe, loginUser } from '../../redux/slices/authSlice';
 import BackNav from '../../components/common/BackNav';
-import API from '../../utils/api';
+import API, { API_BASE_URL } from '../../utils/api';
 import toast from 'react-hot-toast';
 
 const GoogleIcon = () => (
@@ -21,7 +21,7 @@ const GoogleIcon = () => (
 const resolveGoogleAuthUrl = () => {
   const host = window.location.hostname;
   const isLocalHost = host === 'localhost' || host === '127.0.0.1' || host === '0.0.0.0';
-  const base = API.defaults.baseURL;
+  const base = API_BASE_URL || API.defaults.baseURL;
 
   if (isLocalHost) return '/api/auth/google';
   if (typeof base === 'string' && /^https?:\/\//.test(base)) return `${base}/auth/google`;
