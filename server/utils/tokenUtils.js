@@ -1,5 +1,6 @@
 const jwt = require('jsonwebtoken');
 const nodemailer = require('nodemailer');
+const { cleanEnvValue } = require('./env');
 
 // ─── Token Utilities ─────────────────────────────────────────
 const generateAccessToken = (userId) => {
@@ -35,15 +36,18 @@ const sendTokenResponse = (user, statusCode, res) => {
 
 // ─── Email Utility ────────────────────────────────────────────
 const transporter = nodemailer.createTransport({
-  host: process.env.EMAIL_HOST,
-  port: process.env.EMAIL_PORT,
+  host: cleanEnvValue(process.env.EMAIL_HOST),
+  port: Number(cleanEnvValue(process.env.EMAIL_PORT, '587')),
   secure: false,
-  auth: { user: process.env.EMAIL_USER, pass: process.env.EMAIL_PASS },
+  auth: {
+    user: cleanEnvValue(process.env.EMAIL_USER),
+    pass: cleanEnvValue(process.env.EMAIL_PASS),
+  },
 });
 
 const sendEmail = async ({ to, subject, html }) => {
   const mailOptions = {
-    from: process.env.EMAIL_FROM,
+    from: cleanEnvValue(process.env.EMAIL_FROM),
     to,
     subject,
     html,

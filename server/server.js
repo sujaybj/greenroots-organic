@@ -11,6 +11,7 @@ const passport = require('passport');
 require('dotenv').config({ path: path.resolve(__dirname, '../.env') });
 require('dotenv').config();
 require('./config/passport');
+const { cleanEnvValue } = require('./utils/env');
 
 const authRoutes = require('./routes/authRoutes');
 const userRoutes = require('./routes/userRoutes');
@@ -22,12 +23,26 @@ const adminRoutes = require('./routes/adminRoutes');
 const { errorHandler, notFound } = require('./middleware/errorMiddleware');
 
 const app = express();
+let server;
 
 const normalizeOrigin = (value = '') => String(value).trim().replace(/\/+$/, '');
 const configuredClientOrigins = String(process.env.CLIENT_URL || '')
   .split(',')
   .map(normalizeOrigin)
   .filter(Boolean);
+
+const requiredEnv = [
+  'MONGO_URI',
+  'JWT_SECRET',
+  'REFRESH_TOKEN_SECRET',
+  'CLIENT_URL',
+];
+
+const missingEnv = requiredEnv.filter((key) => !cleanEnvValue(process.env[key]));
+if (missingEnv.length > 0) {
+  console.error(`Missing required environment variables: ${missingEnv.join(', ')}`);
+  process.exit(1);
+}
 
 // ─── Security Middleware ────────────────────────────────────
 app.use(helmet());
@@ -57,11 +72,12 @@ app.use(cors({
     const normalizedOrigin = normalizeOrigin(origin);
 
     // Allow all vercel.app preview deployments
-    if (
-      !origin ||
-      allowed.includes(normalizedOrigin) ||
-      /\.vercel\.app$/i.test(new URL(normalizedOrigin).hostname)
-    ) {
+    let hostname = '';
+    try {
+      hostname = normalizedOrigin ? new URL(normalizedOrigin).hostname : '';
+    } catch {}
+
+    if (!origin || allowed.includes(normalizedOrigin) || /\.vercel\.app$/i.test(hostname)) {
       return cb(null, true);
     }
 
@@ -110,11 +126,24 @@ const PORT = process.env.PORT || 5000;
 mongoose.connect(process.env.MONGO_URI)
   .then(() => {
     console.log('✅ MongoDB connected successfully');
-    app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
+    server = app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
   })
   .catch((err) => {
     console.error('❌ MongoDB connection failed:', err.message);
     process.exit(1);
   });
+
+process.on('unhandledRejection', (error) => {
+  console.error('Unhandled promise rejection:', error);
+});
+
+process.on('uncaughtException', (error) => {
+  console.error('Uncaught exception:', error);
+  if (server) {
+    server.close(() => process.exit(1));
+  } else {
+    process.exit(1);
+  }
+});
 
 module.exports = app;

@@ -2,18 +2,28 @@
 const Razorpay = require('razorpay');
 const crypto   = require('crypto');
 const Order    = require('../models/Order');
+const { cleanEnvValue } = require('../utils/env');
 
-// ── Init Razorpay once (not per request) ─────────────────────
-const razorpay = new Razorpay({
-  key_id:     process.env.RAZORPAY_KEY_ID,
-  key_secret: process.env.RAZORPAY_KEY_SECRET,
-});
+const getRazorpay = () => {
+  const keyId = cleanEnvValue(process.env.RAZORPAY_KEY_ID);
+  const keySecret = cleanEnvValue(process.env.RAZORPAY_KEY_SECRET);
+
+  if (!keyId || !keySecret) {
+    throw new Error('Razorpay keys are not configured correctly');
+  }
+
+  return new Razorpay({
+    key_id: keyId,
+    key_secret: keySecret,
+  });
+};
 
 // @desc    Create Razorpay order
 // @route   POST /api/payment/create-order
 exports.createRazorpayOrder = async (req, res) => {
   try {
     const { orderId } = req.body;
+    const razorpay = getRazorpay();
     const order = await Order.findById(orderId);
     if (!order) return res.status(404).json({ success: false, message: 'Order not found' });
     if (order.user.toString() !== req.user._id.toString())
@@ -40,7 +50,7 @@ exports.createRazorpayOrder = async (req, res) => {
       razorpayOrderId: razorpayOrder.id,
       amount:          razorpayOrder.amount,
       currency:        razorpayOrder.currency,
-      key:             process.env.RAZORPAY_KEY_ID,
+      key:             cleanEnvValue(process.env.RAZORPAY_KEY_ID),
     });
   } catch (error) {
     console.error('Payment create error:', error.message);
@@ -55,7 +65,7 @@ exports.verifyPayment = async (req, res) => {
     const { razorpayOrderId, razorpayPaymentId, razorpaySignature, orderId } = req.body;
 
     const expected = crypto
-      .createHmac('sha256', process.env.RAZORPAY_KEY_SECRET)
+      .createHmac('sha256', cleanEnvValue(process.env.RAZORPAY_KEY_SECRET))
       .update(`${razorpayOrderId}|${razorpayPaymentId}`)
       .digest('hex');
 
@@ -83,7 +93,7 @@ exports.razorpayWebhook = async (req, res) => {
   try {
     const sig      = req.headers['x-razorpay-signature'];
     const expected = crypto
-      .createHmac('sha256', process.env.RAZORPAY_WEBHOOK_SECRET || '')
+      .createHmac('sha256', cleanEnvValue(process.env.RAZORPAY_WEBHOOK_SECRET || ''))
       .update(JSON.stringify(req.body))
       .digest('hex');
 
