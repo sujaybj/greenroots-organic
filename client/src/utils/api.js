@@ -3,16 +3,26 @@ import toast from 'react-hot-toast';
 
 const explicitApiUrl = process.env.REACT_APP_API_URL;
 const isDevelopment = process.env.NODE_ENV === 'development';
+const host = window.location.hostname;
+const isLocalHost = host === 'localhost' || host === '127.0.0.1' || host === '0.0.0.0';
 const explicitIsLocalhost =
   explicitApiUrl?.includes('localhost') ||
   explicitApiUrl?.includes('127.0.0.1') ||
   explicitApiUrl?.includes('0.0.0.0');
 const defaultProdApi = 'https://greenroots-backend.onrender.com/api';
 
-// In CRA development, always prefer the local proxy unless the env points to a non-local backend.
-const API_BASE = isDevelopment
-  ? (explicitApiUrl && !explicitIsLocalhost ? explicitApiUrl : '/api')
-  : (!explicitApiUrl || explicitIsLocalhost ? defaultProdApi : explicitApiUrl);
+const isExplicitSameOriginApi =
+  typeof explicitApiUrl === 'string' &&
+  (explicitApiUrl.startsWith('/api') || explicitApiUrl.includes(host));
+
+// In local development, prefer the CRA proxy. Everywhere else, force the deployed backend.
+const API_BASE = (isDevelopment && isLocalHost)
+  ? '/api'
+  : (
+      explicitApiUrl && !explicitIsLocalhost && !isExplicitSameOriginApi
+        ? explicitApiUrl
+        : defaultProdApi
+    );
 
 const API = axios.create({
   baseURL: API_BASE,

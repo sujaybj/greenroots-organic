@@ -19,12 +19,13 @@ const GoogleIcon = () => (
 );
 
 const resolveGoogleAuthUrl = () => {
-  const isDevelopment = process.env.NODE_ENV === 'development';
-  const base = API.defaults.baseURL || '/api';
+  const host = window.location.hostname;
+  const isLocalHost = host === 'localhost' || host === '127.0.0.1' || host === '0.0.0.0';
+  const base = API.defaults.baseURL;
 
-  if (isDevelopment) return '/api/auth/google';
+  if (isLocalHost) return '/api/auth/google';
   if (typeof base === 'string' && /^https?:\/\//.test(base)) return `${base}/auth/google`;
-  return '/api/auth/google';
+  return 'https://greenroots-backend.onrender.com/api/auth/google';
 };
 
 const features = [
