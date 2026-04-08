@@ -32,9 +32,15 @@ export const loginUser = createAsyncThunk('auth/login', async (data, { rejectWit
   }
 });
 
-export const logoutUser = createAsyncThunk('auth/logout', async () => {
-  await API.post('/auth/logout');
-  localStorage.removeItem('accessToken');
+export const logoutUser = createAsyncThunk('auth/logout', async (_, { rejectWithValue }) => {
+  try {
+    await API.post('/auth/logout');
+  } catch (err) {
+    // Clear local auth state even if the backend call fails due to network/CORS issues.
+    return rejectWithValue(err.response?.data?.message || err.message || 'Logout failed');
+  } finally {
+    localStorage.removeItem('accessToken');
+  }
 });
 
 export const getMe = createAsyncThunk('auth/getMe', async (_, { rejectWithValue }) => {
@@ -132,6 +138,12 @@ const authSlice = createSlice({
         state.user = null; state.accessToken = null;
         state.isAuthenticated = false;
         toast.success('Logged out successfully');
+      })
+      .addCase(logoutUser.rejected, (state, action) => {
+        state.user = null; state.accessToken = null;
+        state.isAuthenticated = false;
+        state.error = action.payload || null;
+        toast.success('Logged out locally');
       })
 
       // Get Me

@@ -204,6 +204,76 @@ exports.updateOrderStatus = async (req, res) => {
   }
 };
 
+exports.reviewReturnRequest = async (req, res) => {
+  try {
+    const { action, adminNote = '' } = req.body;
+    const order = await Order.findById(req.params.id);
+
+    if (!order) return res.status(404).json({ success: false, message: 'Order not found' });
+    if (!order.returnRequest?.status) {
+      return res.status(400).json({ success: false, message: 'No return/refund/replacement request found for this order' });
+    }
+
+    if (!['approve', 'reject', 'complete'].includes(action)) {
+      return res.status(400).json({ success: false, message: 'Action must be approve, reject, or complete' });
+    }
+
+    if (action === 'approve') {
+      order.returnRequest.status = 'approved';
+      order.returnRequest.reviewedAt = new Date();
+      order.returnRequest.adminNote = adminNote;
+      order.statusHistory.push({
+        status: order.orderStatus,
+        note: `${order.returnRequest.type} request approved${adminNote ? `: ${adminNote}` : ''}`,
+        timestamp: new Date(),
+      });
+    }
+
+    if (action === 'reject') {
+      order.returnRequest.status = 'rejected';
+      order.returnRequest.reviewedAt = new Date();
+      order.returnRequest.adminNote = adminNote;
+      order.statusHistory.push({
+        status: order.orderStatus,
+        note: `${order.returnRequest.type} request rejected${adminNote ? `: ${adminNote}` : ''}`,
+        timestamp: new Date(),
+      });
+    }
+
+    if (action === 'complete') {
+      const requestType = order.returnRequest.type;
+      order.returnRequest.status = 'completed';
+      order.returnRequest.reviewedAt = new Date();
+      order.returnRequest.adminNote = adminNote;
+
+      if (requestType === 'return' || requestType === 'refund') {
+        order.paymentStatus = 'refunded';
+      }
+
+      if (requestType === 'return' || requestType === 'replacement') {
+        for (const item of order.items) {
+          await Product.findByIdAndUpdate(item.product, { $inc: { stock: item.quantity } });
+        }
+      }
+
+      if (requestType === 'return') {
+        order.orderStatus = 'returned';
+      }
+
+      order.statusHistory.push({
+        status: requestType === 'return' ? 'returned' : order.orderStatus,
+        note: `${requestType} request completed${adminNote ? `: ${adminNote}` : ''}`,
+        timestamp: new Date(),
+      });
+    }
+
+    await order.save();
+    res.status(200).json({ success: true, order });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
 exports.getAllOrders = async (req, res) => {
   try {
     const { page = 1, limit = 20, status, paymentStatus } = req.query;

@@ -2,18 +2,24 @@ const crypto = require('crypto');
 const User   = require('../models/User');
 const { generateAccessToken, generateRefreshToken, sendEmail, sendOTPEmail, sendPasswordResetEmail } = require('../utils/tokenUtils');
 
+const buildCookieOptions = () => {
+  const isProd = process.env.NODE_ENV === 'production';
+  return {
+    httpOnly: true,
+    secure: isProd,
+    sameSite: isProd ? 'none' : 'lax',
+  };
+};
+
 // ── Helper: set cookie + send JSON ───────────────────────────
 const sendTokenResponse = (user, statusCode, res) => {
   const accessToken  = generateAccessToken(user._id);
   const refreshToken = generateRefreshToken(user._id);
 
   // ── Cookie settings — MUST allow cross-domain (Render → Vercel) ──
-  const isProd = process.env.NODE_ENV === 'production';
   const cookieOptions = {
-    httpOnly: true,
-    secure:   isProd,          // HTTPS only in prod
-    sameSite: isProd ? 'none' : 'lax',  // 'none' allows cross-domain in prod
-    maxAge:   30 * 24 * 60 * 60 * 1000,
+    ...buildCookieOptions(),
+    maxAge: 30 * 24 * 60 * 60 * 1000,
   };
 
   res.cookie('refreshToken', refreshToken, cookieOptions);
@@ -105,11 +111,8 @@ exports.googleCallback = async (req, res) => {
     const accessToken  = generateAccessToken(user._id);
     const refreshToken = generateRefreshToken(user._id);
 
-    const isProd = process.env.NODE_ENV === 'production';
     const cookieOptions = {
-      httpOnly: true,
-      secure:   isProd,
-      sameSite: isProd ? 'none' : 'lax',
+      ...buildCookieOptions(),
       maxAge:   30 * 24 * 60 * 60 * 1000,
     };
     res.cookie('refreshToken', refreshToken, cookieOptions);
@@ -182,8 +185,9 @@ exports.refreshToken = async (req, res) => {
 
 // @desc    Logout
 exports.logout = async (req, res) => {
-  res.clearCookie('refreshToken');
-  res.clearCookie('accessToken');
+  const cookieOptions = buildCookieOptions();
+  res.clearCookie('refreshToken', cookieOptions);
+  res.clearCookie('accessToken', cookieOptions);
   res.status(200).json({ success: true, message: 'Logged out' });
 };
 

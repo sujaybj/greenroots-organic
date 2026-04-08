@@ -23,6 +23,12 @@ const { errorHandler, notFound } = require('./middleware/errorMiddleware');
 
 const app = express();
 
+const normalizeOrigin = (value = '') => String(value).trim().replace(/\/+$/, '');
+const configuredClientOrigins = String(process.env.CLIENT_URL || '')
+  .split(',')
+  .map(normalizeOrigin)
+  .filter(Boolean);
+
 // ─── Security Middleware ────────────────────────────────────
 app.use(helmet());
 app.use(mongoSanitize());
@@ -44,14 +50,21 @@ const authLimiter = rateLimit({
 app.use(cors({
   origin: (origin, cb) => {
     const allowed = [
-      process.env.CLIENT_URL,
+      ...configuredClientOrigins,
       'http://localhost:3000',
       'http://localhost:3001',
-    ].filter(Boolean);
+    ].map(normalizeOrigin).filter(Boolean);
+    const normalizedOrigin = normalizeOrigin(origin);
+
     // Allow all vercel.app preview deployments
-    if (!origin || allowed.includes(origin) || /\.vercel\.app$/.test(origin)) {
+    if (
+      !origin ||
+      allowed.includes(normalizedOrigin) ||
+      /\.vercel\.app$/i.test(new URL(normalizedOrigin).hostname)
+    ) {
       return cb(null, true);
     }
+
     cb(new Error(`CORS blocked: ${origin}`));
   },
   credentials: true,
@@ -82,6 +95,9 @@ try {
   app.use('/api/contact', contactRoutes);
 } catch {}
 
+app.get('/', (req, res) => {
+  res.status(200).json({ status: 'OK', message: 'GreenRoots backend is running' });
+});
 app.get('/api/health', (req, res) => res.json({ status: 'OK', message: 'Server is running', uptime: Math.floor(process.uptime()) }));
 
 // ─── Error Handling ──────────────────────────────────────────

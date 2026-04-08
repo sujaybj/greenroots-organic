@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   MapPin, Globe, Check, X, Plus, Search,
-  Loader2, ChevronDown, ChevronUp, ToggleLeft, ToggleRight, ImagePlus, Save,
+  Loader2, ChevronDown, ChevronUp, ToggleLeft, ToggleRight, ImagePlus, Save, Pencil, RotateCcw,
 } from 'lucide-react';
 import API from '../../utils/api';
 import toast from 'react-hot-toast';
@@ -226,6 +226,111 @@ const ProductDelivery = ({ product, onSave }) => {
   );
 };
 
+const EditProductModal = ({ product, onClose, onSave }) => {
+  const [form, setForm] = useState({
+    name: product.name || '',
+    description: product.description || '',
+    category: product.category || 'Vegetables',
+    price: String(product.price ?? ''),
+    discountPrice: String(product.discountPrice ?? ''),
+    stock: String(product.stock ?? 0),
+    unit: product.unit || 'piece',
+    isActive: !!product.isActive,
+    isFeatured: !!product.isFeatured,
+  });
+  const [retainImages, setRetainImages] = useState(product.images || []);
+  const [newImages, setNewImages] = useState([]);
+  const [saving, setSaving] = useState(false);
+
+  const submit = async (e) => {
+    e.preventDefault();
+    setSaving(true);
+    try {
+      const formData = new FormData();
+      Object.entries(form).forEach(([k, v]) => formData.append(k, v));
+      formData.append('retainImages', JSON.stringify(retainImages));
+      newImages.forEach((file) => formData.append('images', file));
+
+      const { data } = await API.put(`/products/${product._id}`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+      toast.success('Product updated');
+      onSave(data.product);
+    } catch (error) {
+      toast.error(error?.response?.data?.message || 'Failed to update product');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+      style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', zIndex: 1200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}
+      onClick={onClose}>
+      <motion.form initial={{ scale: 0.96, y: 10 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.96 }}
+        onClick={(e) => e.stopPropagation()} onSubmit={submit}
+        style={{ width: '100%', maxWidth: '760px', background: 'white', borderRadius: '16px', padding: '20px', boxShadow: '0 24px 80px rgba(0,0,0,0.22)', maxHeight: '90vh', overflowY: 'auto' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
+          <h3 style={{ margin: 0, fontSize: '1rem', color: '#1B4332', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <Pencil size={16} color="#2D6A4F" /> Edit Product
+          </h3>
+          <button type="button" onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#9CA3AF' }}><X size={18} /></button>
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(180px,1fr))', gap: '10px', marginBottom: '10px' }}>
+          <input style={inputStyle} placeholder="Product name *" value={form.name} onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))} />
+          <select style={inputStyle} value={form.category} onChange={(e) => setForm((p) => ({ ...p, category: e.target.value }))}>
+            {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
+          </select>
+          <input style={inputStyle} type="number" min="1" placeholder="Price *" value={form.price} onChange={(e) => setForm((p) => ({ ...p, price: e.target.value }))} />
+          <input style={inputStyle} type="number" min="0" placeholder="Discount Price" value={form.discountPrice} onChange={(e) => setForm((p) => ({ ...p, discountPrice: e.target.value }))} />
+          <input style={inputStyle} type="number" min="0" placeholder="Stock" value={form.stock} onChange={(e) => setForm((p) => ({ ...p, stock: e.target.value }))} />
+          <select style={inputStyle} value={form.unit} onChange={(e) => setForm((p) => ({ ...p, unit: e.target.value }))}>
+            {['kg', 'g', 'litre', 'ml', 'piece', 'pack', 'dozen'].map((u) => <option key={u} value={u}>{u}</option>)}
+          </select>
+        </div>
+
+        <textarea style={{ ...inputStyle, minHeight: '95px', marginBottom: '12px', resize: 'vertical' }} placeholder="Description *" value={form.description} onChange={(e) => setForm((p) => ({ ...p, description: e.target.value }))} />
+
+        <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', marginBottom: '12px' }}>
+          <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.84rem', color: '#374151' }}>
+            <input type="checkbox" checked={form.isActive} onChange={(e) => setForm((p) => ({ ...p, isActive: e.target.checked }))} />
+            Active
+          </label>
+          <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.84rem', color: '#374151' }}>
+            <input type="checkbox" checked={form.isFeatured} onChange={(e) => setForm((p) => ({ ...p, isFeatured: e.target.checked }))} />
+            Featured
+          </label>
+        </div>
+
+        <div style={{ marginBottom: '12px' }}>
+          <p style={{ margin: '0 0 8px', fontSize: '0.82rem', fontWeight: 700, color: '#374151' }}>Current images</p>
+          <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+            {retainImages.map((img, idx) => (
+              <div key={`${img.url}-${idx}`} style={{ position: 'relative' }}>
+                <img src={img.url} alt="" style={{ width: '72px', height: '72px', objectFit: 'cover', borderRadius: '8px', border: '1px solid #E5E7EB' }} />
+                <button type="button" onClick={() => setRetainImages((imgs) => imgs.filter((_, i) => i !== idx))}
+                  style={{ position: 'absolute', top: '-6px', right: '-6px', width: '22px', height: '22px', borderRadius: '50%', border: 'none', background: '#DC2626', color: 'white', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <X size={12} />
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+          <input type="file" multiple accept="image/*" onChange={(e) => setNewImages(Array.from(e.target.files || []))} style={{ fontSize: '0.8rem' }} />
+          <span style={{ fontSize: '0.75rem', color: '#6B7280' }}>{newImages.length} new image(s) selected</span>
+          <button type="submit" disabled={saving}
+            style={{ marginLeft: 'auto', display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '9px 16px', background: '#2D6A4F', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 700, cursor: saving ? 'not-allowed' : 'pointer', opacity: saving ? 0.7 : 1 }}>
+            {saving ? <><Loader2 size={13} style={{ animation: 'spin 1s linear infinite' }} /> Saving...</> : <><Save size={13} /> Save Changes</>}
+          </button>
+        </div>
+      </motion.form>
+    </motion.div>
+  );
+};
+
 // ── Main ──────────────────────────────────────────────────────
 const AdminProducts = () => {
   const [products,   setProducts]   = useState([]);
@@ -235,6 +340,7 @@ const AdminProducts = () => {
   const [showBulk,   setShowBulk]   = useState(false);
   const [showCreate, setShowCreate] = useState(false);
   const [creating,   setCreating]   = useState(false);
+  const [editingProduct, setEditingProduct] = useState(null);
   const [newProduct, setNewProduct] = useState({
     name: '', description: '', category: 'Vegetables', price: '', discountPrice: '', stock: '0', unit: 'piece',
   });
@@ -291,6 +397,18 @@ const AdminProducts = () => {
       await API.put(`/products/${p._id}`, { isActive: !p.isActive });
       setProducts(ps => ps.map(x => x._id === p._id ? { ...x, isActive: !p.isActive } : x));
     } catch {}
+  };
+
+  const restockProduct = async (product, amount = 1) => {
+    try {
+      const { data } = await API.put(`/products/${product._id}`, {
+        stock: Number(product.stock || 0) + amount,
+      });
+      setProducts((ps) => ps.map((x) => (x._id === product._id ? data.product : x)));
+      toast.success(`Restocked ${product.name}`);
+    } catch (error) {
+      toast.error(error?.response?.data?.message || 'Failed to restock');
+    }
   };
 
   if (loading) return (
@@ -356,6 +474,19 @@ const AdminProducts = () => {
         )}
       </AnimatePresence>
 
+      <AnimatePresence>
+        {editingProduct && (
+          <EditProductModal
+            product={editingProduct}
+            onClose={() => setEditingProduct(null)}
+            onSave={(updated) => {
+              setProducts((ps) => ps.map((p) => (p._id === updated._id ? updated : p)));
+              setEditingProduct(null);
+            }}
+          />
+        )}
+      </AnimatePresence>
+
       {/* Bulk panel */}
       <AnimatePresence>
         {showBulk && (
@@ -386,6 +517,14 @@ const AdminProducts = () => {
                 </p>
               </div>
               <div style={{ display:'flex', gap:'5px', flexShrink:0 }}>
+                <button onClick={() => setEditingProduct(product)}
+                  style={{ padding:'5px 9px', background:'#EEF2FF', color:'#3730A3', border:'none', borderRadius:'6px', fontWeight:600, fontSize:'0.71rem', cursor:'pointer', fontFamily:'Inter,sans-serif', display:'flex', alignItems:'center', gap:'4px' }}>
+                  <Pencil size={10}/> Edit
+                </button>
+                <button onClick={() => restockProduct(product, 10)}
+                  style={{ padding:'5px 9px', background:'#ECFDF5', color:'#166534', border:'none', borderRadius:'6px', fontWeight:600, fontSize:'0.71rem', cursor:'pointer', fontFamily:'Inter,sans-serif', display:'flex', alignItems:'center', gap:'4px' }}>
+                  <RotateCcw size={10}/> Restock +10
+                </button>
                 <button onClick={() => toggleActive(product)}
                   style={{ padding:'5px 9px', background: product.isActive?'#FFF1F2':'#F0FDF4', color: product.isActive?'#E11D48':'#2D6A4F', border:'none', borderRadius:'6px', fontWeight:600, fontSize:'0.71rem', cursor:'pointer', fontFamily:'Inter,sans-serif' }}>
                   {product.isActive ? 'Deactivate' : 'Activate'}

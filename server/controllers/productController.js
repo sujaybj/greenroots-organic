@@ -1,5 +1,32 @@
 const Product = require('../models/Product');
 
+const parseBoolean = (value, fallback) => {
+  if (value === undefined) return fallback;
+  if (typeof value === 'boolean') return value;
+  if (typeof value === 'string') return value === 'true';
+  return Boolean(value);
+};
+
+const parseNumber = (value, fallback) => {
+  if (value === undefined || value === null || value === '') return fallback;
+  const parsed = Number(value);
+  return Number.isNaN(parsed) ? fallback : parsed;
+};
+
+const parseArrayField = (value, fallback = []) => {
+  if (value === undefined || value === null || value === '') return fallback;
+  if (Array.isArray(value)) return value;
+  if (typeof value === 'string') {
+    try {
+      const parsed = JSON.parse(value);
+      return Array.isArray(parsed) ? parsed : fallback;
+    } catch {
+      return fallback;
+    }
+  }
+  return fallback;
+};
+
 // @desc    Get all products
 exports.getProducts = async (req, res) => {
   try {
@@ -117,10 +144,30 @@ exports.updateProduct = async (req, res) => {
   try {
     let product = await Product.findById(req.params.id);
     if (!product) return res.status(404).json({ success: false, message: 'Product not found' });
-    if (req.files?.length > 0) {
-      req.body.images = [...(product.images || []), ...req.files.map(f => ({ url: f.path, publicId: f.filename }))];
-    }
-    product = await Product.findByIdAndUpdate(req.params.id, req.body, { new: true, runValidators: true });
+
+    const retainImages = parseArrayField(req.body.retainImages, product.images || []);
+    const uploadedImages = req.files?.map((f) => ({ url: f.path, publicId: f.filename })) || [];
+    const images = [...retainImages, ...uploadedImages];
+
+    const updatePayload = {
+      ...req.body,
+      name: req.body.name ?? product.name,
+      description: req.body.description ?? product.description,
+      shortDescription: req.body.shortDescription ?? product.shortDescription,
+      category: req.body.category ?? product.category,
+      unit: req.body.unit ?? product.unit,
+      tags: parseArrayField(req.body.tags, product.tags || []),
+      certifications: parseArrayField(req.body.certifications, product.certifications || []),
+      ingredients: parseArrayField(req.body.ingredients, product.ingredients || []),
+      price: parseNumber(req.body.price, product.price),
+      discountPrice: parseNumber(req.body.discountPrice, product.discountPrice),
+      stock: parseNumber(req.body.stock, product.stock),
+      isActive: parseBoolean(req.body.isActive, product.isActive),
+      isFeatured: parseBoolean(req.body.isFeatured, product.isFeatured),
+      images,
+    };
+
+    product = await Product.findByIdAndUpdate(req.params.id, updatePayload, { new: true, runValidators: true });
     res.status(200).json({ success: true, product });
   } catch (error) { res.status(500).json({ success: false, message: error.message }); }
 };

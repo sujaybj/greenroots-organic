@@ -23,6 +23,7 @@ const AdminOrders = () => {
   const [filter, setFilter] = useState('');
   const [updatingId, setUpdatingId] = useState(null);
   const [search, setSearch] = useState('');
+  const [returnNotes, setReturnNotes] = useState({});
 
   useEffect(() => {
     API.get('/admin/orders')
@@ -39,6 +40,22 @@ const AdminOrders = () => {
       toast.success(`Order marked as ${status}`);
     } catch {
       toast.error('Failed to update status');
+    } finally {
+      setUpdatingId(null);
+    }
+  };
+
+  const reviewReturnRequest = async (orderId, action) => {
+    setUpdatingId(orderId);
+    try {
+      const { data } = await API.patch(`/admin/orders/${orderId}/return-request`, {
+        action,
+        adminNote: returnNotes[orderId] || '',
+      });
+      setOrders(prev => prev.map(o => (o._id === orderId ? data.order : o)));
+      toast.success(`Request ${action}d successfully`);
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to update request');
     } finally {
       setUpdatingId(null);
     }
@@ -116,7 +133,7 @@ const AdminOrders = () => {
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.88rem' }}>
               <thead>
                 <tr style={{ background: '#F9FAFB' }}>
-                  {['Order ID', 'Customer', 'Items', 'Total', 'Payment', 'Order Status', 'Update Status'].map(h => (
+                  {['Order ID', 'Customer', 'Items', 'Total', 'Payment', 'Order Status', 'Return/Refund', 'Update Status'].map(h => (
                     <th key={h} style={{ textAlign: 'left', padding: '14px 16px', color: '#6B7280', fontWeight: 600, borderBottom: '1px solid #E5E7EB', whiteSpace: 'nowrap' }}>{h}</th>
                   ))}
                 </tr>
@@ -149,6 +166,32 @@ const AdminOrders = () => {
                         <span style={{ background: sc.bg, color: sc.text, padding: '4px 12px', borderRadius: '100px', fontSize: '0.78rem', fontWeight: 700, textTransform: 'capitalize', whiteSpace: 'nowrap' }}>
                           {order.orderStatus === 'outForDelivery' ? 'Out for Delivery' : order.orderStatus}
                         </span>
+                      </td>
+                      <td style={{ padding: '14px 16px', minWidth: '220px' }}>
+                        {order.returnRequest?.status ? (
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                            <div style={{ fontSize: '0.78rem', color: '#374151' }}>
+                              <strong style={{ textTransform: 'capitalize' }}>{order.returnRequest.type}</strong>{' '}
+                              <span style={{ color: '#6B7280' }}>({order.returnRequest.status})</span>
+                            </div>
+                            <div style={{ fontSize: '0.76rem', color: '#6B7280' }}>{order.returnRequest.reason}</div>
+                            <input
+                              value={returnNotes[order._id] ?? order.returnRequest.adminNote ?? ''}
+                              onChange={(e) => setReturnNotes((prev) => ({ ...prev, [order._id]: e.target.value }))}
+                              placeholder="Admin note"
+                              style={{ padding: '7px 10px', borderRadius: '8px', border: '1.5px solid #E5E7EB', fontSize: '0.8rem', outline: 'none' }}
+                            />
+                            {order.returnRequest.status !== 'completed' && order.returnRequest.status !== 'rejected' && (
+                              <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                                <button onClick={() => reviewReturnRequest(order._id, 'approve')} disabled={updatingId === order._id} className="btn btn-outline btn-sm">Approve</button>
+                                <button onClick={() => reviewReturnRequest(order._id, 'reject')} disabled={updatingId === order._id} className="btn btn-outline btn-sm">Reject</button>
+                                <button onClick={() => reviewReturnRequest(order._id, 'complete')} disabled={updatingId === order._id} className="btn btn-primary btn-sm">Complete</button>
+                              </div>
+                            )}
+                          </div>
+                        ) : (
+                          <span style={{ color: '#9CA3AF', fontSize: '0.78rem' }}>No request</span>
+                        )}
                       </td>
                       <td style={{ padding: '14px 16px' }}>
                         <select

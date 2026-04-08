@@ -65,6 +65,13 @@ API.interceptors.response.use(
   (response) => response,
   async (error) => {
     const original = error.config;
+    const isNetworkError = !error.response;
+
+    if (isNetworkError && original?.method === 'get' && !original._networkRetry) {
+      original._networkRetry = true;
+      await new Promise((resolve) => setTimeout(resolve, 1500));
+      return API(original);
+    }
 
     if (
       error.response?.status === 401 &&
