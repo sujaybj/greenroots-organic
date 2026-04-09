@@ -352,12 +352,6 @@ const OrderDetail = () => {
                 <XCircle size={13}/> Cancel Order
               </button>
             )}
-            {canRequestReturn && (
-              <button onClick={() => setShowReturn(true)}
-                style={{ padding: '7px 14px', background: '#E6F8EC', color: '#166534', border: '1px solid #A7F3D0', borderRadius: '8px', fontWeight: 600, cursor: 'pointer', fontFamily: 'Inter,sans-serif', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '5px' }}>
-                <RotateCcw size={13}/> Return or Replacement
-              </button>
-            )}
             {order.orderStatus === 'delivered' && hasReturnRequest && (
               <button disabled
                 style={{ padding: '7px 14px', background: '#F3F4F6', color: '#6B7280', border: '1px solid #E5E7EB', borderRadius: '8px', fontWeight: 600, cursor: 'not-allowed', fontFamily: 'Inter,sans-serif', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '5px' }}>
@@ -383,59 +377,6 @@ const OrderDetail = () => {
               Status: <strong style={{ textTransform: 'capitalize' }}>{order.returnRequest.status}</strong>
               {order.returnRequest.type !== 'replacement' && order.returnRequest.status === 'completed' ? ' - refund initiated automatically' : ''}
             </p>
-          </div>
-        )}
-
-        {order.orderStatus === 'delivered' && (
-          <div style={{ background: 'linear-gradient(180deg, #F8FBFF 0%, #FFFFFF 100%)', border: '1px solid #D6E7F8', borderRadius: '18px', padding: '18px', marginBottom: '18px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap', marginBottom: '16px' }}>
-              <div>
-                <h3 style={{ fontFamily: 'Inter,sans-serif', fontWeight: 700, fontSize: '1rem', margin: 0, color: '#1F2937' }}>Easy Returns Policy</h3>
-                <p style={{ color: '#64748B', fontSize: '0.82rem', margin: '4px 0 0' }}>One simple return flow. Approved returns automatically move to refund processing.</p>
-              </div>
-              {hasReturnRequest && (
-                <span style={{ background: '#EEF2FF', color: '#3730A3', padding: '6px 10px', borderRadius: '999px', fontSize: '0.76rem', fontWeight: 700 }}>
-                  Request already submitted
-                </span>
-              )}
-            </div>
-
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '10px', marginBottom: '18px' }}>
-              {RETURN_TYPES.map((requestType) => (
-                <div key={requestType.value} style={{ background: 'white', borderRadius: '14px', border: '1px solid #E5E7EB', padding: '14px', boxShadow: '0 8px 18px rgba(15, 23, 42, 0.04)' }}>
-                  <div style={{ width: '34px', height: '34px', borderRadius: '12px', background: '#E6F8EC', display: 'grid', placeItems: 'center', marginBottom: '10px' }}>
-                    <CheckCircle size={18} color="#16A34A" />
-                  </div>
-                  <p style={{ margin: 0, fontWeight: 700, color: '#1F2937', fontSize: '0.9rem' }}>{requestType.label}</p>
-                  <p style={{ margin: '4px 0 0', color: '#64748B', fontSize: '0.77rem', lineHeight: 1.55 }}>{requestType.note}</p>
-                </div>
-              ))}
-            </div>
-
-            <h4 style={{ fontFamily: 'Inter,sans-serif', fontWeight: 700, fontSize: '0.92rem', marginBottom: '10px', color: '#111827' }}>What are the conditions for return?</h4>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '18px' }}>
-              {RETURN_CONDITIONS.map((item) => (
-                <div key={item} style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', color: '#374151', fontSize: '0.86rem', background: 'rgba(255,255,255,0.9)', border: '1px solid #E5E7EB', borderRadius: '12px', padding: '10px 12px' }}>
-                  <CheckCircle size={16} color="#22C55E" style={{ flexShrink: 0, marginTop: '2px' }} />
-                  <span>{item}</span>
-                </div>
-              ))}
-            </div>
-
-            <h4 style={{ fontFamily: 'Inter,sans-serif', fontWeight: 700, fontSize: '0.92rem', marginBottom: '10px', color: '#111827' }}>How to place a return?</h4>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              {RETURN_STEPS.map((step, index) => (
-                <div key={step.title} style={{ display: 'flex', gap: '10px', alignItems: 'flex-start', background: 'rgba(255,255,255,0.94)', border: '1px solid #E5E7EB', borderRadius: '14px', padding: '12px' }}>
-                  <div style={{ width: '24px', height: '24px', borderRadius: '50%', background: '#E6F8EC', color: '#166534', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '0.8rem', flexShrink: 0 }}>
-                    {index + 1}
-                  </div>
-                  <div>
-                    <p style={{ margin: 0, fontWeight: 700, fontSize: '0.86rem', color: '#1F2937' }}>{step.title}</p>
-                    <p style={{ margin: '2px 0 0', color: '#6B7280', fontSize: '0.8rem', lineHeight: 1.6 }}>{step.detail}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
           </div>
         )}
 
@@ -557,6 +498,15 @@ const OrderDetail = () => {
             </span>
           </div>
         </div>
+
+        {canRequestReturn && (
+          <div style={{ marginTop: '16px', display: 'flex', justifyContent: 'flex-end' }}>
+            <button onClick={() => setShowReturn(true)}
+              style={{ padding: '10px 18px', background: '#E6F8EC', color: '#166534', border: '1px solid #A7F3D0', borderRadius: '10px', fontWeight: 700, cursor: 'pointer', fontFamily: 'Inter,sans-serif', fontSize: '0.86rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <RotateCcw size={14}/> Return
+            </button>
+          </div>
+        )}
       </div>
 
       <AnimatePresence>
