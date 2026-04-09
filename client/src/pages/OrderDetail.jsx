@@ -25,9 +25,9 @@ const STATUS_STEPS = ['placed', 'confirmed', 'packed', 'shipped', 'outForDeliver
 const REQUIRES_REASON = ['packed', 'shipped', 'outForDelivery'];
 const CANCEL_REASONS = ['Changed my mind', 'Ordered by mistake', 'Found a better price', 'Delivery taking too long', 'Product no longer needed', 'Other'];
 const RETURN_TYPES = [
-  { value: 'return', label: 'Return' },
-  { value: 'refund', label: 'Refund' },
-  { value: 'replacement', label: 'Replacement' },
+  { value: 'return', label: 'Return', note: 'Send the product back after approval.' },
+  { value: 'refund', label: 'Refund', note: 'Get money back after pickup and quality check.' },
+  { value: 'replacement', label: 'Replacement', note: 'Receive another item if the issue is approved.' },
 ];
 const RETURN_CONDITIONS = [
   'Received damaged product',
@@ -38,15 +38,19 @@ const RETURN_CONDITIONS = [
 const RETURN_STEPS = [
   {
     title: 'Select issue',
-    detail: 'Go to My Orders > Order Details > Return and choose the request type and reason.',
+    detail: 'Choose return, refund, or replacement and select the issue from your order details page.',
   },
   {
     title: 'Get approval',
-    detail: 'Seller review is required before the return, refund, or replacement is processed.',
+    detail: 'Our team reviews the request and confirms whether the request is eligible.',
   },
   {
     title: 'Product pickup and check',
-    detail: 'Product should be in original condition with tags, accessories, and packaging.',
+    detail: 'Keep the product in original condition with tags, accessories, and packaging for pickup.',
+  },
+  {
+    title: 'Resolution',
+    detail: 'Approved requests are completed as refund, replacement, or return closure based on the selected issue.',
   },
 ];
 
@@ -127,7 +131,7 @@ const CancelModal = ({ order, onConfirm, onClose, loading }) => {
 
 const ReturnModal = ({ onClose, onSubmit, loading }) => {
   const [type, setType] = useState('return');
-  const [reason, setReason] = useState('');
+  const [reason, setReason] = useState(RETURN_CONDITIONS[0]);
   const [description, setDescription] = useState('');
 
   return (
@@ -136,29 +140,99 @@ const ReturnModal = ({ onClose, onSubmit, loading }) => {
       onClick={onClose}>
       <motion.div initial={{ scale: 0.92, y: 12 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.92 }}
         onClick={e => e.stopPropagation()}
-        style={{ background: 'white', borderRadius: '18px', padding: '24px', width: '100%', maxWidth: '460px', boxShadow: '0 20px 60px rgba(0,0,0,0.25)' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
+        style={{ background: 'white', borderRadius: '22px', padding: '24px', width: '100%', maxWidth: '560px', boxShadow: '0 20px 60px rgba(0,0,0,0.25)' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
           <h3 style={{ fontFamily: 'Inter,sans-serif', fontWeight: 700, fontSize: '1rem', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
             <RotateCcw size={17} color="#2D6A4F"/> Request Return / Refund / Replacement
           </h3>
           <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#9CA3AF' }}><X size={18}/></button>
         </div>
 
-        <div style={{ marginBottom: '10px' }}>
-          <label style={{ fontSize: '0.8rem', fontWeight: 700, color: '#374151', display: 'block', marginBottom: '6px' }}>Request Type *</label>
-          <select value={type} onChange={e => setType(e.target.value)} style={{ width: '100%', padding: '10px 12px', border: '1.5px solid #E5E7EB', borderRadius: '8px', fontSize: '0.85rem', fontFamily: 'Inter,sans-serif', outline: 'none' }}>
-            {RETURN_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
-          </select>
+        <div style={{ background: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '16px', padding: '14px', marginBottom: '16px' }}>
+          <p style={{ margin: 0, fontWeight: 700, color: '#0F172A', fontSize: '0.9rem' }}>Choose what you need</p>
+          <p style={{ margin: '4px 0 0', color: '#64748B', fontSize: '0.8rem', lineHeight: 1.6 }}>
+            Select a request type first. Once submitted, duplicate requests for the same order are blocked until this one is reviewed.
+          </p>
         </div>
 
-        <div style={{ marginBottom: '10px' }}>
-          <label style={{ fontSize: '0.8rem', fontWeight: 700, color: '#374151', display: 'block', marginBottom: '6px' }}>Reason *</label>
-          <input value={reason} onChange={e => setReason(e.target.value)} placeholder="Brief reason" style={{ width: '100%', padding: '10px 12px', border: '1.5px solid #E5E7EB', borderRadius: '8px', fontSize: '0.85rem', fontFamily: 'Inter,sans-serif', outline: 'none', boxSizing: 'border-box' }} />
+        <div style={{ marginBottom: '16px' }}>
+          <label style={{ fontSize: '0.8rem', fontWeight: 700, color: '#374151', display: 'block', marginBottom: '8px' }}>Request Type *</label>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '10px' }}>
+            {RETURN_TYPES.map((requestType) => {
+              const active = type === requestType.value;
+              return (
+                <button
+                  key={requestType.value}
+                  type="button"
+                  onClick={() => setType(requestType.value)}
+                  style={{
+                    textAlign: 'left',
+                    borderRadius: '14px',
+                    border: `1.5px solid ${active ? '#2D6A4F' : '#E5E7EB'}`,
+                    background: active ? '#F0FDF4' : 'white',
+                    padding: '14px 12px',
+                    color: active ? '#14532D' : '#374151',
+                    boxShadow: active ? '0 8px 18px rgba(34, 197, 94, 0.08)' : 'none',
+                  }}
+                >
+                  <span style={{ display: 'block', fontWeight: 700, fontSize: '0.88rem', marginBottom: '4px' }}>{requestType.label}</span>
+                  <span style={{ display: 'block', fontSize: '0.76rem', lineHeight: 1.55, color: active ? '#166534' : '#6B7280' }}>{requestType.note}</span>
+                </button>
+              );
+            })}
+          </div>
         </div>
 
-        <div style={{ marginBottom: '14px' }}>
-          <label style={{ fontSize: '0.8rem', fontWeight: 700, color: '#374151', display: 'block', marginBottom: '6px' }}>Description</label>
-          <textarea value={description} onChange={e => setDescription(e.target.value)} placeholder="Optional details" style={{ width: '100%', padding: '10px 12px', border: '1.5px solid #E5E7EB', borderRadius: '8px', fontSize: '0.85rem', fontFamily: 'Inter,sans-serif', outline: 'none', minHeight: '82px', resize: 'vertical', boxSizing: 'border-box' }} />
+        <div style={{ marginBottom: '16px' }}>
+          <label style={{ fontSize: '0.8rem', fontWeight: 700, color: '#374151', display: 'block', marginBottom: '8px' }}>Select Issue *</label>
+          <div style={{ display: 'grid', gap: '8px' }}>
+            {RETURN_CONDITIONS.map((item) => {
+              const active = reason === item;
+              return (
+                <button
+                  key={item}
+                  type="button"
+                  onClick={() => setReason(item)}
+                  style={{
+                    textAlign: 'left',
+                    padding: '12px 14px',
+                    borderRadius: '12px',
+                    border: `1.5px solid ${active ? '#2D6A4F' : '#E5E7EB'}`,
+                    background: active ? '#F0FDF4' : '#FFFFFF',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '10px',
+                    color: active ? '#14532D' : '#374151',
+                  }}
+                >
+                  <CheckCircle size={18} color={active ? '#16A34A' : '#9CA3AF'} />
+                  <span style={{ fontSize: '0.86rem', fontWeight: 600 }}>{item}</span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        <div style={{ marginBottom: '16px' }}>
+          <label style={{ fontSize: '0.8rem', fontWeight: 700, color: '#374151', display: 'block', marginBottom: '6px' }}>Additional details</label>
+          <textarea value={description} onChange={e => setDescription(e.target.value)} placeholder="Share any useful details for quick approval" style={{ width: '100%', padding: '10px 12px', border: '1.5px solid #E5E7EB', borderRadius: '10px', fontSize: '0.85rem', fontFamily: 'Inter,sans-serif', outline: 'none', minHeight: '88px', resize: 'vertical', boxSizing: 'border-box' }} />
+        </div>
+
+        <div style={{ background: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '14px', padding: '14px', marginBottom: '16px' }}>
+          <p style={{ margin: 0, fontWeight: 700, fontSize: '0.84rem', color: '#0F172A' }}>Before you submit</p>
+          <div style={{ display: 'grid', gap: '8px', marginTop: '10px' }}>
+            {RETURN_STEPS.slice(1).map((step) => (
+              <div key={step.title} style={{ display: 'flex', gap: '8px', alignItems: 'flex-start' }}>
+                <div style={{ width: '20px', height: '20px', borderRadius: '50%', background: '#DCFCE7', color: '#166534', display: 'grid', placeItems: 'center', fontWeight: 700, fontSize: '0.7rem', flexShrink: 0 }}>
+                  ✓
+                </div>
+                <div>
+                  <p style={{ margin: 0, color: '#0F172A', fontWeight: 600, fontSize: '0.8rem' }}>{step.title}</p>
+                  <p style={{ margin: '2px 0 0', color: '#64748B', fontSize: '0.76rem', lineHeight: 1.55 }}>{step.detail}</p>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
 
         <div style={{ display: 'flex', gap: '10px' }}>
@@ -188,7 +262,7 @@ const OrderDetail = () => {
 
   useEffect(() => {
     if (!order) return;
-    if (searchParams.get('action') === 'return' && order.orderStatus === 'delivered') {
+    if (searchParams.get('action') === 'return' && order.orderStatus === 'delivered' && !order.returnRequest?.status) {
       setShowReturn(true);
     }
   }, [order, searchParams]);
@@ -291,30 +365,45 @@ const OrderDetail = () => {
         )}
 
         {order.orderStatus === 'delivered' && (
-          <div style={{ background: '#F8FBFF', border: '1px solid #D6E7F8', borderRadius: '14px', padding: '18px', marginBottom: '18px' }}>
-            <h3 style={{ fontFamily: 'Inter,sans-serif', fontWeight: 700, fontSize: '0.98rem', marginBottom: '14px', color: '#1F2937' }}>Easy Returns Policy</h3>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: '10px', marginBottom: '18px' }}>
-              {['Replacement', 'Refund', 'Exchange'].map((label) => (
-                <div key={label} style={{ background: 'white', borderRadius: '12px', border: '1px solid #E5E7EB', padding: '12px', textAlign: 'center', fontWeight: 700, color: '#374151' }}>
-                  {label}
+          <div style={{ background: 'linear-gradient(180deg, #F8FBFF 0%, #FFFFFF 100%)', border: '1px solid #D6E7F8', borderRadius: '18px', padding: '18px', marginBottom: '18px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap', marginBottom: '16px' }}>
+              <div>
+                <h3 style={{ fontFamily: 'Inter,sans-serif', fontWeight: 700, fontSize: '1rem', margin: 0, color: '#1F2937' }}>Easy Returns Policy</h3>
+                <p style={{ color: '#64748B', fontSize: '0.82rem', margin: '4px 0 0' }}>Structured return help, similar to major shopping apps.</p>
+              </div>
+              {hasReturnRequest && (
+                <span style={{ background: '#EEF2FF', color: '#3730A3', padding: '6px 10px', borderRadius: '999px', fontSize: '0.76rem', fontWeight: 700 }}>
+                  Request already submitted
+                </span>
+              )}
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '10px', marginBottom: '18px' }}>
+              {RETURN_TYPES.map((requestType) => (
+                <div key={requestType.value} style={{ background: 'white', borderRadius: '14px', border: '1px solid #E5E7EB', padding: '14px', boxShadow: '0 8px 18px rgba(15, 23, 42, 0.04)' }}>
+                  <div style={{ width: '34px', height: '34px', borderRadius: '12px', background: '#E6F8EC', display: 'grid', placeItems: 'center', marginBottom: '10px' }}>
+                    <CheckCircle size={18} color="#16A34A" />
+                  </div>
+                  <p style={{ margin: 0, fontWeight: 700, color: '#1F2937', fontSize: '0.9rem' }}>{requestType.label}</p>
+                  <p style={{ margin: '4px 0 0', color: '#64748B', fontSize: '0.77rem', lineHeight: 1.55 }}>{requestType.note}</p>
                 </div>
               ))}
             </div>
 
-            <h4 style={{ fontFamily: 'Inter,sans-serif', fontWeight: 700, fontSize: '0.9rem', marginBottom: '10px', color: '#111827' }}>What are the conditions for return?</h4>
+            <h4 style={{ fontFamily: 'Inter,sans-serif', fontWeight: 700, fontSize: '0.92rem', marginBottom: '10px', color: '#111827' }}>What are the conditions for return?</h4>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '18px' }}>
               {RETURN_CONDITIONS.map((item) => (
-                <div key={item} style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', color: '#374151', fontSize: '0.86rem' }}>
+                <div key={item} style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', color: '#374151', fontSize: '0.86rem', background: 'rgba(255,255,255,0.9)', border: '1px solid #E5E7EB', borderRadius: '12px', padding: '10px 12px' }}>
                   <CheckCircle size={16} color="#22C55E" style={{ flexShrink: 0, marginTop: '2px' }} />
                   <span>{item}</span>
                 </div>
               ))}
             </div>
 
-            <h4 style={{ fontFamily: 'Inter,sans-serif', fontWeight: 700, fontSize: '0.9rem', marginBottom: '10px', color: '#111827' }}>How to place a return?</h4>
+            <h4 style={{ fontFamily: 'Inter,sans-serif', fontWeight: 700, fontSize: '0.92rem', marginBottom: '10px', color: '#111827' }}>How to place a return?</h4>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
               {RETURN_STEPS.map((step, index) => (
-                <div key={step.title} style={{ display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
+                <div key={step.title} style={{ display: 'flex', gap: '10px', alignItems: 'flex-start', background: 'rgba(255,255,255,0.94)', border: '1px solid #E5E7EB', borderRadius: '14px', padding: '12px' }}>
                   <div style={{ width: '24px', height: '24px', borderRadius: '50%', background: '#E6F8EC', color: '#166534', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '0.8rem', flexShrink: 0 }}>
                     {index + 1}
                   </div>

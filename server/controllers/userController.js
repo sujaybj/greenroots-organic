@@ -108,7 +108,8 @@ exports.toggleWishlist = async (req, res) => {
       user.wishlist.push(productId);
     }
     await user.save();
-    res.status(200).json({ success: true, wishlist: user.wishlist, added: idx === -1 });
+    const updatedUser = await User.findById(req.user._id).populate('wishlist', 'name images price discountPrice rating');
+    res.status(200).json({ success: true, wishlist: updatedUser.wishlist, added: idx === -1 });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
