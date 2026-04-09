@@ -7,9 +7,14 @@ import Loader from '../components/common/Loader';
 import BackNav from '../components/common/BackNav';
 
 const STATUS_COLORS = {
-  placed: '#F59E0B', confirmed: '#3B82F6', packed: '#8B5CF6',
-  shipped: '#06B6D4', outForDelivery: '#F97316', delivered: '#22C55E',
-  cancelled: '#EF4444', returned: '#6B7280',
+  placed: '#F59E0B',
+  confirmed: '#3B82F6',
+  packed: '#8B5CF6',
+  shipped: '#06B6D4',
+  outForDelivery: '#F97316',
+  delivered: '#22C55E',
+  cancelled: '#EF4444',
+  returned: '#6B7280',
 };
 
 const OrderHistory = () => {
@@ -19,10 +24,13 @@ const OrderHistory = () => {
   const [filter, setFilter] = useState('');
 
   useEffect(() => {
-    API.get('/orders/my-orders').then(({ data }) => setOrders(data.orders)).catch(() => {}).finally(() => setLoading(false));
+    API.get('/orders/my-orders')
+      .then(({ data }) => setOrders(data.orders))
+      .catch(() => {})
+      .finally(() => setLoading(false));
   }, []);
 
-  const filtered = filter ? orders.filter((o) => o.orderStatus === filter) : orders;
+  const filtered = filter ? orders.filter((order) => order.orderStatus === filter) : orders;
 
   if (loading) return <div style={{ display: 'flex', justifyContent: 'center', padding: '80px' }}><Loader /></div>;
 
@@ -41,7 +49,13 @@ const OrderHistory = () => {
               key={status}
               onClick={() => setFilter(status)}
               style={{
-                padding: '7px 16px', borderRadius: '100px', border: 'none', cursor: 'pointer', fontWeight: 500, fontSize: '0.85rem', flexShrink: 0,
+                padding: '7px 16px',
+                borderRadius: '100px',
+                border: 'none',
+                cursor: 'pointer',
+                fontWeight: 500,
+                fontSize: '0.85rem',
+                flexShrink: 0,
                 background: filter === status ? '#2D6A4F' : '#F3F4F6',
                 color: filter === status ? 'white' : '#374151',
               }}
@@ -77,8 +91,8 @@ const OrderHistory = () => {
                 </div>
 
                 <div style={{ display: 'flex', gap: '8px', marginTop: '12px', alignItems: 'center' }}>
-                  {order.items.slice(0, 4).map((item, i) => (
-                    <img key={i} src={item.image} alt={item.name} style={{ width: '44px', height: '44px', objectFit: 'cover', borderRadius: '6px' }} />
+                  {order.items.slice(0, 4).map((item, index) => (
+                    <img key={index} src={item.image} alt={item.name} style={{ width: '44px', height: '44px', objectFit: 'cover', borderRadius: '6px' }} />
                   ))}
                   {order.items.length > 4 && (
                     <div style={{ width: '44px', height: '44px', background: '#F3F4F6', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.78rem', color: '#6B7280', fontWeight: 600 }}>

@@ -1,7 +1,7 @@
 const express = require('express');
 const router  = express.Router();
 const {
-  getProducts, getProduct, addReview, getCategories,
+  getProducts, getProduct, addReview, getCategories, getReviewEligibility,
   checkDelivery, updateDeliveryAreas,
   createProduct, updateProduct, deleteProduct,
 } = require('../controllers/productController');
@@ -15,6 +15,7 @@ router.get('/:id',                getProduct);
 router.get('/:id/delivery-check', checkDelivery);
 
 // Protected
+router.get('/:id/review-eligibility', protect, getReviewEligibility);
 router.post('/:id/review', protect, addReview);
 
 // Admin

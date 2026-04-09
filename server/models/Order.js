@@ -66,6 +66,8 @@ const orderSchema = new mongoose.Schema({
     requestedAt: Date,
     reviewedAt: Date,
     adminNote: String,
+    resolution: { type: String, enum: ['refund', 'replacement'] },
+    refundInitiatedAt: Date,
   },
 }, { timestamps: true });
 

@@ -23,6 +23,11 @@ const STATE_MULTIPLIER = {
 
 const BLOCK_COD_CANCEL_STATUSES = new Set(['packed', 'shipped', 'outForDelivery']);
 const RETURN_TYPES = new Set(['return', 'refund', 'replacement']);
+const REPLACEMENT_REASONS = new Set([
+  'Received damaged product',
+  'Received defective product',
+  'Received wrong product',
+]);
 
 exports.createOrder = async (req, res) => {
   try {
@@ -139,7 +144,7 @@ exports.cancelOrder = async (req, res) => {
     if (order.paymentMethod === 'cod' && BLOCK_COD_CANCEL_STATUSES.has(order.orderStatus)) {
       return res.status(400).json({
         success: false,
-        message: 'COD orders cannot be cancelled after packing. Please request return/refund/replacement after delivery.',
+        message: 'COD orders cannot be cancelled after packing. Please request a return after delivery.',
       });
     }
 
@@ -211,7 +216,7 @@ exports.reviewReturnRequest = async (req, res) => {
 
     if (!order) return res.status(404).json({ success: false, message: 'Order not found' });
     if (!order.returnRequest?.status) {
-      return res.status(400).json({ success: false, message: 'No return/refund/replacement request found for this order' });
+      return res.status(400).json({ success: false, message: 'No return or replacement request found for this order' });
     }
 
     if (!['approve', 'reject', 'complete'].includes(action)) {
@@ -219,14 +224,37 @@ exports.reviewReturnRequest = async (req, res) => {
     }
 
     if (action === 'approve') {
-      order.returnRequest.status = 'approved';
+      const requestType = order.returnRequest.type === 'refund' ? 'return' : order.returnRequest.type;
+      order.returnRequest.type = requestType;
       order.returnRequest.reviewedAt = new Date();
       order.returnRequest.adminNote = adminNote;
-      order.statusHistory.push({
-        status: order.orderStatus,
-        note: `${order.returnRequest.type} request approved${adminNote ? `: ${adminNote}` : ''}`,
-        timestamp: new Date(),
-      });
+
+      if (requestType === 'return') {
+        order.returnRequest.status = 'completed';
+        order.returnRequest.resolution = 'refund';
+        order.returnRequest.refundInitiatedAt = new Date();
+        order.paymentStatus = 'refunded';
+        order.refundAmount = order.totalAmount;
+        order.orderStatus = 'returned';
+
+        for (const item of order.items) {
+          await Product.findByIdAndUpdate(item.product, { $inc: { stock: item.quantity } });
+        }
+
+        order.statusHistory.push({
+          status: 'returned',
+          note: `Return approved and refund initiated${adminNote ? `: ${adminNote}` : ''}`,
+          timestamp: new Date(),
+        });
+      } else {
+        order.returnRequest.status = 'approved';
+        order.returnRequest.resolution = 'replacement';
+        order.statusHistory.push({
+          status: order.orderStatus,
+          note: `Replacement request approved${adminNote ? `: ${adminNote}` : ''}`,
+          timestamp: new Date(),
+        });
+      }
     }
 
     if (action === 'reject') {
@@ -235,34 +263,25 @@ exports.reviewReturnRequest = async (req, res) => {
       order.returnRequest.adminNote = adminNote;
       order.statusHistory.push({
         status: order.orderStatus,
-        note: `${order.returnRequest.type} request rejected${adminNote ? `: ${adminNote}` : ''}`,
+        note: `${order.returnRequest.type === 'refund' ? 'return' : order.returnRequest.type} request rejected${adminNote ? `: ${adminNote}` : ''}`,
         timestamp: new Date(),
       });
     }
 
     if (action === 'complete') {
-      const requestType = order.returnRequest.type;
+      const requestType = order.returnRequest.type === 'refund' ? 'return' : order.returnRequest.type;
+      if (requestType !== 'replacement') {
+        return res.status(400).json({ success: false, message: 'Only replacement requests need a completion step' });
+      }
+
+      order.returnRequest.type = requestType;
       order.returnRequest.status = 'completed';
       order.returnRequest.reviewedAt = new Date();
       order.returnRequest.adminNote = adminNote;
 
-      if (requestType === 'return' || requestType === 'refund') {
-        order.paymentStatus = 'refunded';
-      }
-
-      if (requestType === 'return' || requestType === 'replacement') {
-        for (const item of order.items) {
-          await Product.findByIdAndUpdate(item.product, { $inc: { stock: item.quantity } });
-        }
-      }
-
-      if (requestType === 'return') {
-        order.orderStatus = 'returned';
-      }
-
       order.statusHistory.push({
-        status: requestType === 'return' ? 'returned' : order.orderStatus,
-        note: `${requestType} request completed${adminNote ? `: ${adminNote}` : ''}`,
+        status: order.orderStatus,
+        note: `Replacement request completed${adminNote ? `: ${adminNote}` : ''}`,
         timestamp: new Date(),
       });
     }
@@ -306,31 +325,37 @@ exports.requestReturn = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Request allowed only after delivery' });
     }
     if (!type || !RETURN_TYPES.has(type)) {
-      return res.status(400).json({ success: false, message: 'Type must be return, refund, or replacement' });
+      return res.status(400).json({ success: false, message: 'Type must be return or replacement' });
     }
     if (!reason) {
       return res.status(400).json({ success: false, message: 'Reason is required' });
+    }
+    if (type === 'replacement' && !REPLACEMENT_REASONS.has(reason)) {
+      return res.status(400).json({ success: false, message: 'Replacement is only available for damaged, defective, or wrong product issues' });
     }
     if (order.returnRequest?.status === 'pending') {
       return res.status(400).json({ success: false, message: 'A request is already pending for this order' });
     }
 
+    const normalizedType = type === 'refund' ? 'return' : type;
+
     order.returnRequest = {
-      type,
+      type: normalizedType,
       reason,
       description,
       status: 'pending',
+      resolution: normalizedType === 'replacement' ? 'replacement' : 'refund',
       requestedAt: new Date(),
     };
 
     order.statusHistory.push({
       status: 'returned',
-      note: `${type} requested: ${reason}`,
+      note: `${normalizedType} requested: ${reason}`,
       timestamp: new Date(),
     });
 
     await order.save();
-    res.status(200).json({ success: true, message: `${type} request submitted`, order });
+    res.status(200).json({ success: true, message: `${normalizedType} request submitted`, order });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }

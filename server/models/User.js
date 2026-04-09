@@ -13,6 +13,14 @@ const addressSchema = new mongoose.Schema({
   isDefault: { type: Boolean, default: false },
 });
 
+const notificationSchema = new mongoose.Schema({
+  type: { type: String, enum: ['restock'], default: 'restock' },
+  title: { type: String, required: true },
+  message: { type: String, required: true },
+  product: { type: mongoose.Schema.Types.ObjectId, ref: 'Product' },
+  readAt: Date,
+}, { timestamps: true });
+
 const userSchema = new mongoose.Schema({
   name: { type: String, required: [true, 'Name is required'], trim: true, maxlength: 50 },
   email: {
@@ -36,6 +44,7 @@ const userSchema = new mongoose.Schema({
   resetPasswordExpiry: { type: Date, select: false },
   addresses: [addressSchema],
   wishlist: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Product' }],
+  notifications: [notificationSchema],
   refreshToken: { type: String, select: false },
 }, { timestamps: true });
 

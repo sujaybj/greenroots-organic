@@ -194,7 +194,7 @@ exports.logout = async (req, res) => {
 // @desc    Get current user
 exports.getMe = async (req, res) => {
   try {
-    const user = await User.findById(req.user._id).populate('wishlist', 'name images price discountPrice rating');
+    const user = await User.findById(req.user._id).populate('wishlist', 'name images price discountPrice rating stock');
     res.status(200).json({ success: true, user });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });

@@ -25,8 +25,7 @@ const STATUS_STEPS = ['placed', 'confirmed', 'packed', 'shipped', 'outForDeliver
 const REQUIRES_REASON = ['packed', 'shipped', 'outForDelivery'];
 const CANCEL_REASONS = ['Changed my mind', 'Ordered by mistake', 'Found a better price', 'Delivery taking too long', 'Product no longer needed', 'Other'];
 const RETURN_TYPES = [
-  { value: 'return', label: 'Return', note: 'Send the product back after approval.' },
-  { value: 'refund', label: 'Refund', note: 'Get money back after pickup and quality check.' },
+  { value: 'return', label: 'Return', note: 'Approved returns automatically trigger a refund to your original payment account.' },
   { value: 'replacement', label: 'Replacement', note: 'Receive another item if the issue is approved.' },
 ];
 const RETURN_CONDITIONS = [
@@ -35,10 +34,15 @@ const RETURN_CONDITIONS = [
   'Received wrong product',
   'Did not like the product',
 ];
+const REPLACEMENT_REASONS = new Set([
+  'Received damaged product',
+  'Received defective product',
+  'Received wrong product',
+]);
 const RETURN_STEPS = [
   {
     title: 'Select issue',
-    detail: 'Choose return, refund, or replacement and select the issue from your order details page.',
+    detail: 'Choose return or replacement and select the issue from your order details page.',
   },
   {
     title: 'Get approval',
@@ -50,7 +54,7 @@ const RETURN_STEPS = [
   },
   {
     title: 'Resolution',
-    detail: 'Approved requests are completed as refund, replacement, or return closure based on the selected issue.',
+    detail: 'Approved returns trigger refund processing automatically. Approved replacements are completed after dispatch.',
   },
 ];
 
@@ -133,6 +137,13 @@ const ReturnModal = ({ onClose, onSubmit, loading }) => {
   const [type, setType] = useState('return');
   const [reason, setReason] = useState(RETURN_CONDITIONS[0]);
   const [description, setDescription] = useState('');
+  const replacementAllowed = REPLACEMENT_REASONS.has(reason);
+
+  useEffect(() => {
+    if (!replacementAllowed && type === 'replacement') {
+      setType('return');
+    }
+  }, [replacementAllowed, type]);
 
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
@@ -143,7 +154,7 @@ const ReturnModal = ({ onClose, onSubmit, loading }) => {
         style={{ background: 'white', borderRadius: '22px', padding: '24px', width: '100%', maxWidth: '560px', boxShadow: '0 20px 60px rgba(0,0,0,0.25)' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
           <h3 style={{ fontFamily: 'Inter,sans-serif', fontWeight: 700, fontSize: '1rem', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <RotateCcw size={17} color="#2D6A4F"/> Request Return / Refund / Replacement
+            <RotateCcw size={17} color="#2D6A4F"/> Request Return or Replacement
           </h3>
           <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#9CA3AF' }}><X size={18}/></button>
         </div>
@@ -151,7 +162,7 @@ const ReturnModal = ({ onClose, onSubmit, loading }) => {
         <div style={{ background: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '16px', padding: '14px', marginBottom: '16px' }}>
           <p style={{ margin: 0, fontWeight: 700, color: '#0F172A', fontSize: '0.9rem' }}>Choose what you need</p>
           <p style={{ margin: '4px 0 0', color: '#64748B', fontSize: '0.8rem', lineHeight: 1.6 }}>
-            Select a request type first. Once submitted, duplicate requests for the same order are blocked until this one is reviewed.
+            Select return or replacement. If a return request is approved after verification, the refund is automatically initiated to your original payment account.
           </p>
         </div>
 
@@ -160,23 +171,28 @@ const ReturnModal = ({ onClose, onSubmit, loading }) => {
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '10px' }}>
             {RETURN_TYPES.map((requestType) => {
               const active = type === requestType.value;
+              const disabled = requestType.value === 'replacement' && !replacementAllowed;
               return (
                 <button
                   key={requestType.value}
                   type="button"
-                  onClick={() => setType(requestType.value)}
+                  onClick={() => !disabled && setType(requestType.value)}
+                  disabled={disabled}
                   style={{
                     textAlign: 'left',
                     borderRadius: '14px',
-                    border: `1.5px solid ${active ? '#2D6A4F' : '#E5E7EB'}`,
-                    background: active ? '#F0FDF4' : 'white',
+                    border: `1.5px solid ${active ? '#2D6A4F' : disabled ? '#E5E7EB' : '#E5E7EB'}`,
+                    background: active ? '#F0FDF4' : disabled ? '#F8FAFC' : 'white',
                     padding: '14px 12px',
-                    color: active ? '#14532D' : '#374151',
+                    color: active ? '#14532D' : disabled ? '#94A3B8' : '#374151',
                     boxShadow: active ? '0 8px 18px rgba(34, 197, 94, 0.08)' : 'none',
+                    opacity: disabled ? 0.75 : 1,
                   }}
                 >
                   <span style={{ display: 'block', fontWeight: 700, fontSize: '0.88rem', marginBottom: '4px' }}>{requestType.label}</span>
-                  <span style={{ display: 'block', fontSize: '0.76rem', lineHeight: 1.55, color: active ? '#166534' : '#6B7280' }}>{requestType.note}</span>
+                  <span style={{ display: 'block', fontSize: '0.76rem', lineHeight: 1.55, color: active ? '#166534' : disabled ? '#94A3B8' : '#6B7280' }}>
+                    {disabled ? 'Available only for damaged, defective, or wrong product issues.' : requestType.note}
+                  </span>
                 </button>
               );
             })}
@@ -339,13 +355,13 @@ const OrderDetail = () => {
             {canRequestReturn && (
               <button onClick={() => setShowReturn(true)}
                 style={{ padding: '7px 14px', background: '#E6F8EC', color: '#166534', border: '1px solid #A7F3D0', borderRadius: '8px', fontWeight: 600, cursor: 'pointer', fontFamily: 'Inter,sans-serif', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '5px' }}>
-                <RotateCcw size={13}/> Return / Refund / Replacement
+                <RotateCcw size={13}/> Return or Replacement
               </button>
             )}
             {order.orderStatus === 'delivered' && hasReturnRequest && (
               <button disabled
                 style={{ padding: '7px 14px', background: '#F3F4F6', color: '#6B7280', border: '1px solid #E5E7EB', borderRadius: '8px', fontWeight: 600, cursor: 'not-allowed', fontFamily: 'Inter,sans-serif', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '5px' }}>
-                <RotateCcw size={13}/> {hasPendingReturn ? 'Return Request Pending' : 'Return Request Submitted'}
+                <RotateCcw size={13}/> {hasPendingReturn ? 'Request Pending' : 'Request Submitted'}
               </button>
             )}
           </div>
@@ -354,13 +370,19 @@ const OrderDetail = () => {
         {codCancelBlocked && (
           <div style={{ background: '#FFF8E1', border: '1px solid #FDE68A', borderRadius: '10px', padding: '10px 12px', marginBottom: '14px', color: '#92400E', fontSize: '0.82rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
             <AlertTriangle size={14} color="#D97706"/>
-            COD orders cannot be cancelled after packed stage. Please request return/refund/replacement once delivered.
+            COD orders cannot be cancelled after packed stage. Please request a return once delivered.
           </div>
         )}
 
         {order.returnRequest?.status && (
-          <div style={{ background: '#EEF2FF', border: '1px solid #C7D2FE', borderRadius: '10px', padding: '10px 12px', marginBottom: '14px', color: '#3730A3', fontSize: '0.82rem' }}>
-            {`Return request: ${order.returnRequest.type} (${order.returnRequest.status})`}
+          <div style={{ background: '#F8FAFC', border: '1px solid #DCE7F3', borderRadius: '16px', padding: '14px 16px', marginBottom: '14px' }}>
+            <p style={{ margin: 0, fontWeight: 700, color: '#0F172A', fontSize: '0.9rem' }}>
+              {order.returnRequest.type === 'replacement' ? 'Replacement request' : 'Return request'}
+            </p>
+            <p style={{ margin: '4px 0 0', color: '#475569', fontSize: '0.82rem' }}>
+              Status: <strong style={{ textTransform: 'capitalize' }}>{order.returnRequest.status}</strong>
+              {order.returnRequest.type !== 'replacement' && order.returnRequest.status === 'completed' ? ' - refund initiated automatically' : ''}
+            </p>
           </div>
         )}
 
@@ -369,7 +391,7 @@ const OrderDetail = () => {
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap', marginBottom: '16px' }}>
               <div>
                 <h3 style={{ fontFamily: 'Inter,sans-serif', fontWeight: 700, fontSize: '1rem', margin: 0, color: '#1F2937' }}>Easy Returns Policy</h3>
-                <p style={{ color: '#64748B', fontSize: '0.82rem', margin: '4px 0 0' }}>Structured return help, similar to major shopping apps.</p>
+                <p style={{ color: '#64748B', fontSize: '0.82rem', margin: '4px 0 0' }}>One simple return flow. Approved returns automatically move to refund processing.</p>
               </div>
               {hasReturnRequest && (
                 <span style={{ background: '#EEF2FF', color: '#3730A3', padding: '6px 10px', borderRadius: '999px', fontSize: '0.76rem', fontWeight: 700 }}>

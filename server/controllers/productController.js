@@ -1,4 +1,6 @@
 const Product = require('../models/Product');
+const Order = require('../models/Order');
+const User = require('../models/User');
 
 const parseBoolean = (value, fallback) => {
   if (value === undefined) return fallback;
@@ -77,6 +79,16 @@ exports.getProduct = async (req, res) => {
   }
 };
 
+const canUserReviewProduct = async (userId, productId) => {
+  const deliveredOrder = await Order.findOne({
+    user: userId,
+    orderStatus: 'delivered',
+    'items.product': productId,
+  }).select('_id');
+
+  return Boolean(deliveredOrder);
+};
+
 // @desc    Get categories with counts
 exports.getCategories = async (req, res) => {
   try {
@@ -144,6 +156,7 @@ exports.updateProduct = async (req, res) => {
   try {
     let product = await Product.findById(req.params.id);
     if (!product) return res.status(404).json({ success: false, message: 'Product not found' });
+    const previousStock = product.stock;
 
     const retainImages = parseArrayField(req.body.retainImages, product.images || []);
     const uploadedImages = req.files?.map((f) => ({ url: f.path, publicId: f.filename })) || [];
@@ -168,6 +181,23 @@ exports.updateProduct = async (req, res) => {
     };
 
     product = await Product.findByIdAndUpdate(req.params.id, updatePayload, { new: true, runValidators: true });
+
+    if (previousStock === 0 && product.stock > 0) {
+      await User.updateMany(
+        { wishlist: product._id },
+        {
+          $push: {
+            notifications: {
+              type: 'restock',
+              title: 'Back in stock',
+              message: `${product.name} is available again. You can buy it now.`,
+              product: product._id,
+            },
+          },
+        }
+      );
+    }
+
     res.status(200).json({ success: true, product });
   } catch (error) { res.status(500).json({ success: false, message: error.message }); }
 };
@@ -189,6 +219,11 @@ exports.addReview = async (req, res) => {
     const product = await Product.findById(req.params.id);
     if (!product) return res.status(404).json({ success: false, message: 'Product not found' });
 
+    const eligible = await canUserReviewProduct(req.user._id, product._id);
+    if (!eligible) {
+      return res.status(403).json({ success: false, message: 'You can review this product only after it has been delivered to you' });
+    }
+
     const alreadyReviewed = product.reviews.find(r => r.user.toString() === req.user._id.toString());
     if (alreadyReviewed) return res.status(400).json({ success: false, message: 'You have already reviewed this product' });
 
@@ -196,6 +231,18 @@ exports.addReview = async (req, res) => {
     product.updateRating();
     await product.save();
     res.status(201).json({ success: true, message: 'Review added successfully' });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+exports.getReviewEligibility = async (req, res) => {
+  try {
+    const product = await Product.findById(req.params.id).select('_id');
+    if (!product) return res.status(404).json({ success: false, message: 'Product not found' });
+
+    const canReview = await canUserReviewProduct(req.user._id, product._id);
+    res.status(200).json({ success: true, canReview });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }

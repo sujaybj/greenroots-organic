@@ -4,7 +4,7 @@ const { cloudinary } = require('../config/cloudinary');
 // @desc    Get profile
 exports.getProfile = async (req, res) => {
   try {
-    const user = await User.findById(req.user._id).populate('wishlist', 'name images price discountPrice rating');
+    const user = await User.findById(req.user._id).populate('wishlist', 'name images price discountPrice rating stock');
     res.status(200).json({ success: true, user });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
@@ -108,8 +108,26 @@ exports.toggleWishlist = async (req, res) => {
       user.wishlist.push(productId);
     }
     await user.save();
-    const updatedUser = await User.findById(req.user._id).populate('wishlist', 'name images price discountPrice rating');
+    const updatedUser = await User.findById(req.user._id).populate('wishlist', 'name images price discountPrice rating stock');
     res.status(200).json({ success: true, wishlist: updatedUser.wishlist, added: idx === -1 });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// @desc    Mark a notification as read
+exports.markNotificationRead = async (req, res) => {
+  try {
+    const user = await User.findById(req.user._id);
+    const notification = user.notifications.id(req.params.id);
+    if (!notification) {
+      return res.status(404).json({ success: false, message: 'Notification not found' });
+    }
+
+    notification.readAt = new Date();
+    await user.save();
+
+    res.status(200).json({ success: true, notifications: user.notifications });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }

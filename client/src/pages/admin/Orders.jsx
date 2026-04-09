@@ -36,7 +36,7 @@ const AdminOrders = () => {
     setUpdatingId(orderId);
     try {
       await API.put(`/admin/orders/${orderId}/status`, { status });
-      setOrders(prev => prev.map(o => (o._id === orderId ? { ...o, orderStatus: status } : o)));
+      setOrders((prev) => prev.map((order) => (order._id === orderId ? { ...order, orderStatus: status } : order)));
       toast.success(`Order marked as ${status}`);
     } catch {
       toast.error('Failed to update status');
@@ -52,7 +52,7 @@ const AdminOrders = () => {
         action,
         adminNote: returnNotes[orderId] || '',
       });
-      setOrders(prev => prev.map(o => (o._id === orderId ? data.order : o)));
+      setOrders((prev) => prev.map((order) => (order._id === orderId ? data.order : order)));
       toast.success(`Request ${action}d successfully`);
     } catch (err) {
       toast.error(err.response?.data?.message || 'Failed to update request');
@@ -62,21 +62,21 @@ const AdminOrders = () => {
   };
 
   let filtered = orders;
-  if (filter) filtered = filtered.filter(o => o.orderStatus === filter);
+  if (filter) filtered = filtered.filter((order) => order.orderStatus === filter);
   if (search) {
     const text = search.toLowerCase();
-    filtered = filtered.filter(o =>
-      o._id.toLowerCase().includes(text) ||
-      o.user?.name?.toLowerCase().includes(text) ||
-      o.user?.email?.toLowerCase().includes(text)
+    filtered = filtered.filter((order) =>
+      order._id.toLowerCase().includes(text) ||
+      order.user?.name?.toLowerCase().includes(text) ||
+      order.user?.email?.toLowerCase().includes(text)
     );
   }
 
   const stats = {
     total: orders.length,
-    pending: orders.filter(o => ['placed', 'confirmed', 'packed'].includes(o.orderStatus)).length,
-    delivered: orders.filter(o => o.orderStatus === 'delivered').length,
-    revenue: orders.filter(o => o.paymentStatus === 'paid').reduce((sum, o) => sum + (o.totalAmount || 0), 0),
+    pending: orders.filter((order) => ['placed', 'confirmed', 'packed'].includes(order.orderStatus)).length,
+    delivered: orders.filter((order) => order.orderStatus === 'delivered').length,
+    revenue: orders.filter((order) => order.paymentStatus === 'paid').reduce((sum, order) => sum + (order.totalAmount || 0), 0),
   };
 
   return (
@@ -89,7 +89,7 @@ const AdminOrders = () => {
           { label: 'Active Orders', value: stats.pending, Icon: Hourglass, color: '#F59E0B' },
           { label: 'Delivered', value: stats.delivered, Icon: CheckCircle2, color: '#22C55E' },
           { label: 'Revenue', value: `₹${stats.revenue.toLocaleString('en-IN')}`, Icon: IndianRupee, color: '#2D6A4F' },
-        ].map(stat => (
+        ].map((stat) => (
           <div key={stat.label} style={{ background: 'white', borderRadius: '12px', padding: '18px', boxShadow: '0 2px 6px rgba(0,0,0,0.05)', borderLeft: `3px solid ${stat.color}` }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div>
@@ -110,17 +110,17 @@ const AdminOrders = () => {
           <input
             placeholder="Search order ID or customer..."
             value={search}
-            onChange={e => setSearch(e.target.value)}
+            onChange={(e) => setSearch(e.target.value)}
             style={{ padding: '9px 14px 9px 34px', border: '1.5px solid #E5E7EB', borderRadius: '10px', fontSize: '0.88rem', outline: 'none', minWidth: '240px' }}
           />
         </div>
         <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
           <button onClick={() => setFilter('')} style={{ padding: '7px 14px', borderRadius: '100px', border: 'none', cursor: 'pointer', fontWeight: 600, fontSize: '0.82rem', background: !filter ? '#2D6A4F' : '#F3F4F6', color: !filter ? 'white' : '#374151' }}>All</button>
-          {STATUS_OPTIONS.map(s => {
-            const c = STATUS_COLORS[s] || { bg: '#F3F4F6', text: '#374151' };
+          {STATUS_OPTIONS.map((status) => {
+            const color = STATUS_COLORS[status] || { bg: '#F3F4F6', text: '#374151' };
             return (
-              <button key={s} onClick={() => setFilter(s)} style={{ padding: '7px 14px', borderRadius: '100px', border: 'none', cursor: 'pointer', fontWeight: 600, fontSize: '0.82rem', background: filter === s ? c.bg : '#F3F4F6', color: filter === s ? c.text : '#374151', textTransform: 'capitalize' }}>
-                {s === 'outForDelivery' ? 'Out for Delivery' : s}
+              <button key={status} onClick={() => setFilter(status)} style={{ padding: '7px 14px', borderRadius: '100px', border: 'none', cursor: 'pointer', fontWeight: 600, fontSize: '0.82rem', background: filter === status ? color.bg : '#F3F4F6', color: filter === status ? color.text : '#374151', textTransform: 'capitalize' }}>
+                {status === 'outForDelivery' ? 'Out for Delivery' : status}
               </button>
             );
           })}
@@ -133,16 +133,17 @@ const AdminOrders = () => {
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.88rem' }}>
               <thead>
                 <tr style={{ background: '#F9FAFB' }}>
-                  {['Order ID', 'Customer', 'Items', 'Total', 'Payment', 'Order Status', 'Return/Refund', 'Update Status'].map(h => (
-                    <th key={h} style={{ textAlign: 'left', padding: '14px 16px', color: '#6B7280', fontWeight: 600, borderBottom: '1px solid #E5E7EB', whiteSpace: 'nowrap' }}>{h}</th>
+                  {['Order ID', 'Customer', 'Items', 'Total', 'Payment', 'Order Status', 'Return / Replace', 'Update Status'].map((heading) => (
+                    <th key={heading} style={{ textAlign: 'left', padding: '14px 16px', color: '#6B7280', fontWeight: 600, borderBottom: '1px solid #E5E7EB', whiteSpace: 'nowrap' }}>{heading}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
-                {filtered.map(order => {
-                  const sc = STATUS_COLORS[order.orderStatus] || { bg: '#F3F4F6', text: '#374151' };
+                {filtered.map((order) => {
+                  const statusColor = STATUS_COLORS[order.orderStatus] || { bg: '#F3F4F6', text: '#374151' };
+                  const requestType = order.returnRequest?.type === 'refund' ? 'return' : order.returnRequest?.type;
                   return (
-                    <tr key={order._id} style={{ borderBottom: '1px solid #F3F4F6' }} onMouseOver={e => { e.currentTarget.style.background = '#FAFAFA'; }} onMouseOut={e => { e.currentTarget.style.background = 'white'; }}>
+                    <tr key={order._id} style={{ borderBottom: '1px solid #F3F4F6' }} onMouseOver={(e) => { e.currentTarget.style.background = '#FAFAFA'; }} onMouseOut={(e) => { e.currentTarget.style.background = 'white'; }}>
                       <td style={{ padding: '14px 16px', fontFamily: 'monospace', fontWeight: 700, color: '#2D6A4F', whiteSpace: 'nowrap' }}>#{order._id.slice(-8).toUpperCase()}</td>
                       <td style={{ padding: '14px 16px' }}>
                         <div style={{ fontWeight: 600, whiteSpace: 'nowrap' }}>{order.user?.name || 'Unknown'}</div>
@@ -151,19 +152,19 @@ const AdminOrders = () => {
                       <td style={{ padding: '14px 16px', color: '#374151' }}>
                         {order.items?.length} item{order.items?.length !== 1 ? 's' : ''}
                         <div style={{ display: 'flex', gap: '4px', marginTop: '4px' }}>
-                          {order.items?.slice(0, 3).map((item, i) => (
-                            <img key={i} src={item.image} alt="" style={{ width: '28px', height: '28px', objectFit: 'cover', borderRadius: '4px' }} />
+                          {order.items?.slice(0, 3).map((item, index) => (
+                            <img key={index} src={item.image} alt="" style={{ width: '28px', height: '28px', objectFit: 'cover', borderRadius: '4px' }} />
                           ))}
                         </div>
                       </td>
                       <td style={{ padding: '14px 16px', fontWeight: 700, color: '#2D6A4F', whiteSpace: 'nowrap' }}>₹{order.totalAmount?.toLocaleString('en-IN')}</td>
                       <td style={{ padding: '14px 16px' }}>
                         <span style={{ background: order.paymentStatus === 'paid' ? '#D1FAE5' : '#FEF3C7', color: order.paymentStatus === 'paid' ? '#065F46' : '#92400E', padding: '4px 10px', borderRadius: '100px', fontSize: '0.78rem', fontWeight: 700, textTransform: 'capitalize', whiteSpace: 'nowrap' }}>
-                          {order.paymentStatus === 'paid' ? 'Paid' : 'Pending'}
+                          {order.paymentStatus === 'paid' ? 'Paid' : order.paymentStatus}
                         </span>
                       </td>
                       <td style={{ padding: '14px 16px' }}>
-                        <span style={{ background: sc.bg, color: sc.text, padding: '4px 12px', borderRadius: '100px', fontSize: '0.78rem', fontWeight: 700, textTransform: 'capitalize', whiteSpace: 'nowrap' }}>
+                        <span style={{ background: statusColor.bg, color: statusColor.text, padding: '4px 12px', borderRadius: '100px', fontSize: '0.78rem', fontWeight: 700, textTransform: 'capitalize', whiteSpace: 'nowrap' }}>
                           {order.orderStatus === 'outForDelivery' ? 'Out for Delivery' : order.orderStatus}
                         </span>
                       </td>
@@ -171,7 +172,7 @@ const AdminOrders = () => {
                         {order.returnRequest?.status ? (
                           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                             <div style={{ fontSize: '0.78rem', color: '#374151' }}>
-                              <strong style={{ textTransform: 'capitalize' }}>{order.returnRequest.type}</strong>{' '}
+                              <strong style={{ textTransform: 'capitalize' }}>{requestType}</strong>{' '}
                               <span style={{ color: '#6B7280' }}>({order.returnRequest.status})</span>
                             </div>
                             <div style={{ fontSize: '0.76rem', color: '#6B7280' }}>{order.returnRequest.reason}</div>
@@ -183,9 +184,13 @@ const AdminOrders = () => {
                             />
                             {order.returnRequest.status !== 'completed' && order.returnRequest.status !== 'rejected' && (
                               <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-                                <button onClick={() => reviewReturnRequest(order._id, 'approve')} disabled={updatingId === order._id} className="btn btn-outline btn-sm">Approve</button>
+                                <button onClick={() => reviewReturnRequest(order._id, 'approve')} disabled={updatingId === order._id} className="btn btn-outline btn-sm">
+                                  {requestType === 'replacement' ? 'Approve' : 'Approve + Refund'}
+                                </button>
                                 <button onClick={() => reviewReturnRequest(order._id, 'reject')} disabled={updatingId === order._id} className="btn btn-outline btn-sm">Reject</button>
-                                <button onClick={() => reviewReturnRequest(order._id, 'complete')} disabled={updatingId === order._id} className="btn btn-primary btn-sm">Complete</button>
+                                {requestType === 'replacement' && (
+                                  <button onClick={() => reviewReturnRequest(order._id, 'complete')} disabled={updatingId === order._id} className="btn btn-primary btn-sm">Complete</button>
+                                )}
                               </div>
                             )}
                           </div>
@@ -196,13 +201,13 @@ const AdminOrders = () => {
                       <td style={{ padding: '14px 16px' }}>
                         <select
                           value={order.orderStatus}
-                          onChange={e => updateStatus(order._id, e.target.value)}
+                          onChange={(e) => updateStatus(order._id, e.target.value)}
                           disabled={updatingId === order._id || order.orderStatus === 'delivered' || order.orderStatus === 'cancelled'}
                           style={{ padding: '7px 10px', borderRadius: '8px', border: '1.5px solid #E5E7EB', fontSize: '0.85rem', cursor: 'pointer', background: 'white', outline: 'none', minWidth: '140px' }}
                         >
-                          {STATUS_OPTIONS.map(s => (
-                            <option key={s} value={s}>
-                              {s === 'outForDelivery' ? 'Out for Delivery' : s.charAt(0).toUpperCase() + s.slice(1)}
+                          {STATUS_OPTIONS.map((status) => (
+                            <option key={status} value={status}>
+                              {status === 'outForDelivery' ? 'Out for Delivery' : status.charAt(0).toUpperCase() + status.slice(1)}
                             </option>
                           ))}
                         </select>

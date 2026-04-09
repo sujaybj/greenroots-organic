@@ -2,15 +2,16 @@ import React, { useMemo } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { Helmet } from 'react-helmet-async';
 import { Link } from 'react-router-dom';
-import { Heart, HeartOff, ShoppingCart, Trash2, AlertCircle } from 'lucide-react';
+import { Heart, HeartOff, ShoppingCart, Trash2, AlertCircle, Bell } from 'lucide-react';
 import { addToCart } from '../../redux/slices/cartSlice';
-import { updateWishlist } from '../../redux/slices/authSlice';
+import { updateWishlist, setCredentials } from '../../redux/slices/authSlice';
 import API from '../../utils/api';
 
 const Wishlist = () => {
   const dispatch = useDispatch();
-  const { user } = useSelector((state) => state.auth);
+  const { user, accessToken } = useSelector((state) => state.auth);
   const wishlist = user?.wishlist || [];
+  const notifications = user?.notifications || [];
 
   const wishlistItems = useMemo(
     () => wishlist.map((product) => {
@@ -23,10 +24,16 @@ const Wishlist = () => {
         price: isObject ? product.price : null,
         discountPrice: isObject ? product.discountPrice : null,
         rating: isObject ? product.rating : null,
+        stock: isObject ? product.stock : 0,
         isResolved: Boolean(isObject && product._id && product.name),
       };
     }).filter((product) => product._id),
     [wishlist]
+  );
+
+  const unreadRestockNotifications = useMemo(
+    () => notifications.filter((notification) => notification.type === 'restock' && !notification.readAt),
+    [notifications]
   );
 
   const removeFromWishlist = async (productId) => {
@@ -34,11 +41,17 @@ const Wishlist = () => {
     dispatch(updateWishlist(data.wishlist));
   };
 
+  const dismissNotification = async (notificationId) => {
+    await API.patch(`/user/notifications/${notificationId}/read`);
+    const refreshed = await API.get('/auth/me');
+    dispatch(setCredentials({ user: refreshed.data.user, token: accessToken }));
+  };
+
   return (
     <>
       <Helmet><title>My Wishlist - GreenRoots</title></Helmet>
       <div className="container" style={{ paddingTop: '32px', paddingBottom: '48px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px', flexWrap: 'wrap', marginBottom: '32px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px', flexWrap: 'wrap', marginBottom: '24px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
             <div style={{ width: '52px', height: '52px', borderRadius: '16px', background: '#FFF1F2', display: 'grid', placeItems: 'center', flexShrink: 0 }}>
               <Heart size={28} color="#DC2626" />
@@ -57,6 +70,29 @@ const Wishlist = () => {
           )}
         </div>
 
+        {unreadRestockNotifications.length > 0 && (
+          <div style={{ display: 'grid', gap: '10px', marginBottom: '24px' }}>
+            {unreadRestockNotifications.map((notification) => (
+              <div key={notification._id} style={{ background: '#F0FDF4', border: '1px solid #BBF7D0', borderRadius: '16px', padding: '14px 16px', display: 'flex', alignItems: 'flex-start', gap: '12px', justifyContent: 'space-between', flexWrap: 'wrap' }}>
+                <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
+                  <div style={{ width: '38px', height: '38px', borderRadius: '12px', background: '#DCFCE7', display: 'grid', placeItems: 'center', flexShrink: 0 }}>
+                    <Bell size={18} color="#15803D" />
+                  </div>
+                  <div>
+                    <p style={{ margin: 0, fontWeight: 700, color: '#14532D', fontSize: '0.92rem' }}>{notification.title}</p>
+                    <p style={{ margin: '4px 0 0', color: '#166534', fontSize: '0.83rem', lineHeight: 1.6 }}>
+                      {notification.message}
+                    </p>
+                  </div>
+                </div>
+                <button type="button" onClick={() => dismissNotification(notification._id)} className="btn btn-outline btn-sm">
+                  Dismiss
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+
         {wishlistItems.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '60px 20px' }}>
             <div style={{ marginBottom: '16px', display: 'flex', justifyContent: 'center' }}>
@@ -74,6 +110,7 @@ const Wishlist = () => {
               const finalPrice = product.discountPrice || product.price;
               const hasDiscount = typeof product.price === 'number' && typeof finalPrice === 'number' && product.price > finalPrice;
               const imageUrl = product.images?.[0]?.url;
+              const outOfStock = product.isResolved && product.stock === 0;
 
               return (
                 <div key={product._id} style={{ background: 'white', borderRadius: '18px', overflow: 'hidden', boxShadow: '0 14px 30px rgba(15, 23, 42, 0.08)', border: '1px solid #EEF2F7', display: 'flex', flexDirection: 'column' }}>
@@ -95,13 +132,18 @@ const Wishlist = () => {
                     >
                       <Trash2 size={16} />
                     </button>
+                    {outOfStock && (
+                      <div style={{ position: 'absolute', left: '12px', bottom: '12px', background: 'rgba(220, 38, 38, 0.92)', color: 'white', borderRadius: '999px', padding: '6px 10px', fontSize: '0.72rem', fontWeight: 700 }}>
+                        Out of stock
+                      </div>
+                    )}
                   </div>
 
                   <div style={{ padding: '16px', display: 'flex', flexDirection: 'column', gap: '12px', flex: 1 }}>
                     {product.isResolved ? (
                       <>
                         <div>
-                          <h3 style={{ fontSize: '1rem', fontFamily: 'Inter, sans-serif', fontWeight: 700, margin: 0, color: '#0F172A', lineHeight: 1.45 }}>
+                          <h3 style={{ fontSize: '1rem', fontFamily: 'Manrope, sans-serif', fontWeight: 700, margin: 0, color: '#0F172A', lineHeight: 1.45 }}>
                             {product.name}
                           </h3>
                           {typeof product.rating === 'number' && (
@@ -126,9 +168,10 @@ const Wishlist = () => {
                             onClick={() => dispatch(addToCart({ product, quantity: 1 }))}
                             className="btn btn-primary btn-sm"
                             style={{ flex: 1 }}
+                            disabled={outOfStock}
                           >
                             <ShoppingCart size={15} />
-                            Add to Cart
+                            {outOfStock ? 'Notify me' : 'Add to Cart'}
                           </button>
                           <Link to={`/products/${product._id}`} className="btn btn-outline btn-sm">
                             View
