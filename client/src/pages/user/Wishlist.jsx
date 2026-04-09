@@ -47,8 +47,8 @@ const Wishlist = () => {
                       <>
                         <h3 style={{ fontSize: '0.95rem', fontFamily: 'Inter, sans-serif', fontWeight: 600, marginBottom: '8px' }}>{prod.name}</h3>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                          <span style={{ fontWeight: 700, color: '#2D6A4F' }}>?{prod.discountPrice || prod.price}</span>
-                          {prod.price > (prod.discountPrice || prod.price) && <span style={{ textDecoration: 'line-through', color: '#9CA3AF', fontSize: '0.85rem' }}>?{prod.price}</span>}
+                          <span style={{ fontWeight: 700, color: '#2D6A4F' }}>₹{prod.discountPrice || prod.price}</span>
+                          {prod.price > (prod.discountPrice || prod.price) && <span style={{ textDecoration: 'line-through', color: '#9CA3AF', fontSize: '0.85rem' }}>₹{prod.price}</span>}
                         </div>
                         <div style={{ display: 'flex', gap: '8px' }}>
                           <button onClick={() => dispatch(addToCart({ product: prod, quantity: 1 }))} className="btn btn-primary btn-sm" style={{ flex: 1 }}>Add to Cart</button>

@@ -72,7 +72,7 @@ const OrderHistory = () => {
                     <span style={{ background: `${STATUS_COLORS[order.orderStatus]}20`, color: STATUS_COLORS[order.orderStatus], padding: '4px 12px', borderRadius: '100px', fontSize: '0.8rem', fontWeight: 700, textTransform: 'capitalize', whiteSpace: 'nowrap' }}>
                       {order.orderStatus}
                     </span>
-                    <span style={{ fontWeight: 700, color: '#2D6A4F', fontSize: '1rem' }}>?{order.totalAmount}</span>
+                    <span style={{ fontWeight: 700, color: '#2D6A4F', fontSize: '1rem' }}>₹{order.totalAmount}</span>
                   </div>
                 </div>
 
