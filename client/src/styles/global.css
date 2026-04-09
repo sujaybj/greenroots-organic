@@ -13,6 +13,10 @@ body {
   cursor: default;
 }
 
+body, div, p, span, li, ul, ol, h1, h2, h3, h4, h5, h6, strong, small, img {
+  cursor: default;
+}
+
 /* ── All interactive elements: pointer cursor ── */
 a, button, [role="button"],
 input[type="checkbox"], input[type="radio"],
@@ -28,7 +32,7 @@ button:disabled, input:disabled, select:disabled,
 /* ── Text inputs: text cursor ── */
 input[type="text"], input[type="email"], input[type="password"],
 input[type="tel"], input[type="number"], input[type="search"],
-input[type="url"], textarea { cursor: text !important; }
+input[type="url"], textarea, [contenteditable="true"] { cursor: text !important; }
 
 /* ── Typography ── */
 h1,h2,h3,h4,h5,h6 { font-family: 'Playfair Display', Georgia, serif; line-height: 1.3; }

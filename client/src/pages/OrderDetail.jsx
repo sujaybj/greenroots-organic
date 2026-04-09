@@ -29,6 +29,26 @@ const RETURN_TYPES = [
   { value: 'refund', label: 'Refund' },
   { value: 'replacement', label: 'Replacement' },
 ];
+const RETURN_CONDITIONS = [
+  'Received damaged product',
+  'Received defective product',
+  'Received wrong product',
+  'Did not like the product',
+];
+const RETURN_STEPS = [
+  {
+    title: 'Select issue',
+    detail: 'Go to My Orders > Order Details > Return and choose the request type and reason.',
+  },
+  {
+    title: 'Get approval',
+    detail: 'Seller review is required before the return, refund, or replacement is processed.',
+  },
+  {
+    title: 'Product pickup and check',
+    detail: 'Product should be in original condition with tags, accessories, and packaging.',
+  },
+];
 
 const fmt = (ts) => {
   const d = new Date(ts);
@@ -214,8 +234,9 @@ const OrderDetail = () => {
   const codCancelBlocked = order.paymentMethod === 'cod' && midDelivery;
   const canCancel = ['placed', 'confirmed', 'packed', 'shipped', 'outForDelivery'].includes(order.orderStatus) && !codCancelBlocked;
 
+  const hasReturnRequest = Boolean(order.returnRequest?.status);
   const hasPendingReturn = order.returnRequest?.status === 'pending';
-  const canRequestReturn = order.orderStatus === 'delivered' && !hasPendingReturn;
+  const canRequestReturn = order.orderStatus === 'delivered' && !hasReturnRequest;
 
   return (
     <>
@@ -247,10 +268,10 @@ const OrderDetail = () => {
                 <RotateCcw size={13}/> Return / Refund / Replacement
               </button>
             )}
-            {order.orderStatus === 'delivered' && hasPendingReturn && (
+            {order.orderStatus === 'delivered' && hasReturnRequest && (
               <button disabled
                 style={{ padding: '7px 14px', background: '#F3F4F6', color: '#6B7280', border: '1px solid #E5E7EB', borderRadius: '8px', fontWeight: 600, cursor: 'not-allowed', fontFamily: 'Inter,sans-serif', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '5px' }}>
-                <RotateCcw size={13}/> Return Request Pending
+                <RotateCcw size={13}/> {hasPendingReturn ? 'Return Request Pending' : 'Return Request Submitted'}
               </button>
             )}
           </div>
@@ -266,6 +287,44 @@ const OrderDetail = () => {
         {order.returnRequest?.status && (
           <div style={{ background: '#EEF2FF', border: '1px solid #C7D2FE', borderRadius: '10px', padding: '10px 12px', marginBottom: '14px', color: '#3730A3', fontSize: '0.82rem' }}>
             {`Return request: ${order.returnRequest.type} (${order.returnRequest.status})`}
+          </div>
+        )}
+
+        {order.orderStatus === 'delivered' && (
+          <div style={{ background: '#F8FBFF', border: '1px solid #D6E7F8', borderRadius: '14px', padding: '18px', marginBottom: '18px' }}>
+            <h3 style={{ fontFamily: 'Inter,sans-serif', fontWeight: 700, fontSize: '0.98rem', marginBottom: '14px', color: '#1F2937' }}>Easy Returns Policy</h3>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: '10px', marginBottom: '18px' }}>
+              {['Replacement', 'Refund', 'Exchange'].map((label) => (
+                <div key={label} style={{ background: 'white', borderRadius: '12px', border: '1px solid #E5E7EB', padding: '12px', textAlign: 'center', fontWeight: 700, color: '#374151' }}>
+                  {label}
+                </div>
+              ))}
+            </div>
+
+            <h4 style={{ fontFamily: 'Inter,sans-serif', fontWeight: 700, fontSize: '0.9rem', marginBottom: '10px', color: '#111827' }}>What are the conditions for return?</h4>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '18px' }}>
+              {RETURN_CONDITIONS.map((item) => (
+                <div key={item} style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', color: '#374151', fontSize: '0.86rem' }}>
+                  <CheckCircle size={16} color="#22C55E" style={{ flexShrink: 0, marginTop: '2px' }} />
+                  <span>{item}</span>
+                </div>
+              ))}
+            </div>
+
+            <h4 style={{ fontFamily: 'Inter,sans-serif', fontWeight: 700, fontSize: '0.9rem', marginBottom: '10px', color: '#111827' }}>How to place a return?</h4>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              {RETURN_STEPS.map((step, index) => (
+                <div key={step.title} style={{ display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
+                  <div style={{ width: '24px', height: '24px', borderRadius: '50%', background: '#E6F8EC', color: '#166534', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '0.8rem', flexShrink: 0 }}>
+                    {index + 1}
+                  </div>
+                  <div>
+                    <p style={{ margin: 0, fontWeight: 700, fontSize: '0.86rem', color: '#1F2937' }}>{step.title}</p>
+                    <p style={{ margin: '2px 0 0', color: '#6B7280', fontSize: '0.8rem', lineHeight: 1.6 }}>{step.detail}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         )}
 

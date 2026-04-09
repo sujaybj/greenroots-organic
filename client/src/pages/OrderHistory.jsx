@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
-import { ArrowRight, Package, RotateCcw } from 'lucide-react';
+import { ArrowRight, Package } from 'lucide-react';
 import API from '../utils/api';
 import Loader from '../components/common/Loader';
 import BackNav from '../components/common/BackNav';
@@ -92,11 +92,6 @@ const OrderHistory = () => {
                   <button onClick={() => navigate(`/orders/${order._id}`)} className="btn btn-outline btn-sm" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
                     View Details <ArrowRight size={14} />
                   </button>
-                  {order.orderStatus === 'delivered' && (
-                    <button onClick={() => navigate(`/orders/${order._id}?action=return`)} className="btn btn-primary btn-sm" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
-                      <RotateCcw size={14} /> Return / Refund / Replacement
-                    </button>
-                  )}
                 </div>
               </div>
             ))}
