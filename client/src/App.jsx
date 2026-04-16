@@ -7,6 +7,7 @@ import { getMe } from './redux/slices/authSlice';
 import Navbar from './components/layout/Navbar';
 import Footer from './components/layout/Footer';
 import Loader from './components/common/Loader';
+import InstallAppPrompt from './components/common/InstallAppPrompt';
 import SplashScreen from './pages/SplashScreen';
 import './styles/global.css';
 
@@ -136,6 +137,7 @@ function MainLayout() {
         </Suspense>
       </main>
       <Footer />
+      <InstallAppPrompt />
     </div>
   );
 }
