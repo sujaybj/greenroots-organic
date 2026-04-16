@@ -13,6 +13,25 @@ import API from '../../utils/api';
 import Loader from '../../components/common/Loader';
 import toast from 'react-hot-toast';
 
+const DASHBOARD_CACHE_KEY = 'gr_admin_dashboard_cache_v1';
+
+const readDashboardCache = () => {
+  if (typeof window === 'undefined') return null;
+  try {
+    const raw = sessionStorage.getItem(DASHBOARD_CACHE_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+};
+
+const writeDashboardCache = (value) => {
+  if (typeof window === 'undefined') return;
+  try {
+    sessionStorage.setItem(DASHBOARD_CACHE_KEY, JSON.stringify(value));
+  } catch {}
+};
+
 const NAV = [
   { path:'/admin',          Icon:LayoutDashboard, label:'Dashboard'  },
   { path:'/admin/products', Icon:Package,         label:'Products'   },
@@ -174,16 +193,28 @@ const DeliveryAgents = () => {
 
 // ── Main Dashboard ────────────────────────────────────────────
 const AdminDashboard = () => {
-  const [stats,       setStats]       = useState(null);
-  const [loading,     setLoading]     = useState(true);
+  const [stats,       setStats]       = useState(() => readDashboardCache());
+  const [loading,     setLoading]     = useState(() => !readDashboardCache());
   const [refreshing,  setRefreshing]  = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [activeTab,   setActiveTab]   = useState('overview');
+  const [error,       setError]       = useState('');
 
   const loadStats = useCallback(async (silent=false) => {
     if (!silent) setLoading(true); else setRefreshing(true);
-    try { const { data } = await API.get('/admin/dashboard'); setStats(data); }
-    catch {} finally { setLoading(false); setRefreshing(false); }
+    try {
+      const { data } = await API.get('/admin/dashboard');
+      setStats(data);
+      setError('');
+      writeDashboardCache(data);
+    }
+    catch (err) {
+      const message = err.response?.data?.message || err.message || 'Unable to load dashboard right now';
+      setError(message);
+      const cached = readDashboardCache();
+      if (cached) setStats(cached);
+      if (!silent) toast.error(cached ? 'Dashboard is showing the last saved data.' : message);
+    } finally { setLoading(false); setRefreshing(false); }
   }, []);
 
   useEffect(() => {
@@ -228,6 +259,12 @@ const AdminDashboard = () => {
                 </button>
               </div>
             </div>
+
+            {error && (
+              <div style={{ marginBottom:'16px', padding:'12px 14px', borderRadius:'12px', background:'#FFF7ED', border:'1px solid #FED7AA', color:'#9A3412', fontSize:'0.88rem' }}>
+                Dashboard connection is unstable. Showing the last loaded data while the server reconnects.
+              </div>
+            )}
 
             {/* Tabs */}
             <div style={{ display:'flex', gap:'4px', background:'white', borderRadius:'10px', padding:'4px', marginBottom:'20px', border:'1px solid #F3F4F6', width:'fit-content' }}>

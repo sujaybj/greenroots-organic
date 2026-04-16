@@ -30,6 +30,7 @@ const Products = () => {
     page: 1,
   });
   const [filterOpen, setFilterOpen] = useState(false);
+  const hasProducts = products.length > 0;
 
   const applyFilters = useCallback((f) => {
     const params = {};
@@ -113,9 +114,9 @@ const Products = () => {
           </div>
         )}
 
-        {loading ? (
+        {loading && !hasProducts ? (
           <div style={{ display: 'flex', justifyContent: 'center', padding: '80px 0' }}><Loader size={48} /></div>
-        ) : error ? (
+        ) : error && !hasProducts ? (
           <div style={{ textAlign: 'center', padding: '80px 20px' }}>
             <Leaf size={56} color="#2D6A4F" style={{ marginBottom: '16px' }} />
             <h3 style={{ color: '#374151' }}>Could not load products</h3>
@@ -130,9 +131,16 @@ const Products = () => {
             <button onClick={clearAll} className="btn btn-primary" style={{ marginTop: '16px' }}>Clear Filters</button>
           </div>
         ) : (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(min(100%,190px),1fr))', gap: 'clamp(10px,2vw,20px)' }}>
-            {products.map(p => <ProductCard key={p._id} product={p} />)}
-          </div>
+          <>
+            {error && (
+              <div style={{ marginBottom: '16px', padding: '12px 14px', borderRadius: '12px', background: '#FFF7ED', border: '1px solid #FED7AA', color: '#9A3412', fontSize: '0.9rem' }}>
+                Showing your last loaded products while the network reconnects.
+              </div>
+            )}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(min(100%,190px),1fr))', gap: 'clamp(10px,2vw,20px)' }}>
+              {products.map(p => <ProductCard key={p._id} product={p} />)}
+            </div>
+          </>
         )}
 
         {pages > 1 && (

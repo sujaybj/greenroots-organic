@@ -54,6 +54,16 @@ const AuthRoute = ({ children }) => {
   return !isAuthenticated ? children : <Navigate to="/" replace />;
 };
 
+const ScrollToTop = () => {
+  const location = useLocation();
+
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+  }, [location.pathname, location.search]);
+
+  return null;
+};
+
 function App() {
   const dispatch = useDispatch();
   const [showSplash, setShowSplash] = React.useState(true);
@@ -77,6 +87,7 @@ function App() {
   return (
     <HelmetProvider>
       <Router>
+        <ScrollToTop />
         <Toaster position="top-right" toastOptions={{ duration: 3000, style: { fontFamily: 'Inter, sans-serif' } }} />
         <Suspense fallback={<Loader fullPage />}>
           <Routes>
