@@ -118,7 +118,7 @@ const Checkout = () => {
   return (
     <>
       <Helmet><title>Checkout - GreenRoots</title></Helmet>
-      <div className="container" style={{ paddingTop: '32px', paddingBottom: '64px', maxWidth: '900px' }}>
+      <div className="container checkout-page" style={{ paddingTop: '32px', paddingBottom: '64px', maxWidth: '900px' }}>
         <div style={{ marginBottom: '10px' }}>
           <BackNav label="Back" fallback="/cart" />
         </div>
@@ -149,8 +149,8 @@ const Checkout = () => {
           ))}
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'minmax(0,1fr) 320px', gap: isMobile ? '18px' : '32px', alignItems: 'start' }}>
-          <div style={{ background: 'white', borderRadius: '16px', padding: isMobile ? '18px' : '28px', boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}>
+        <div className="checkout-layout" style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'minmax(0,1fr) 320px', gap: isMobile ? '18px' : '32px', alignItems: 'start' }}>
+          <div className="checkout-main-card" style={{ background: 'white', borderRadius: '16px', padding: isMobile ? '18px' : '28px', boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}>
             {step === 1 && (
               <>
                 <h3 style={{ fontFamily: 'Inter, sans-serif', fontWeight: 700, marginBottom: '20px' }}>Delivery Address</h3>
@@ -192,7 +192,7 @@ const Checkout = () => {
                 >
                   <MapPin size={15} /> Use My Current Location
                 </button>
-                <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '16px' }}>
+                <div className="checkout-two-col" style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '16px' }}>
                   {[['fullName', 'Full Name *', 'text', 'John Doe'], ['phone', 'Phone Number *', 'tel', '+91 9876543210']].map(([key, label, type, placeholder]) => (
                     <div key={key} className="form-group">
                       <label className="form-label">{label}</label>
@@ -204,7 +204,7 @@ const Checkout = () => {
                   <label className="form-label">Street Address *</label>
                   <input className="form-input" placeholder="123 Main Street, Koramangala" value={address.street} onChange={(e) => setAddress({ ...address, street: e.target.value })} />
                 </div>
-                <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)', gap: '16px' }}>
+                <div className="checkout-three-col" style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)', gap: '16px' }}>
                   {[['city', 'City *', 'Bangalore'], ['state', 'State *', 'Karnataka'], ['pincode', 'Pincode *', '560034']].map(([key, label, placeholder]) => (
                     <div key={key} className="form-group">
                       <label className="form-label">{label}</label>
@@ -238,6 +238,7 @@ const Checkout = () => {
                   <div
                     key={value}
                     onClick={() => setPaymentMethod(value)}
+                    className="checkout-payment-option"
                     style={{ display: 'flex', gap: '14px', padding: '16px', border: `2px solid ${paymentMethod === value ? '#2D6A4F' : '#E5E7EB'}`, borderRadius: '12px', marginBottom: '12px', cursor: 'pointer', background: paymentMethod === value ? '#F0FDF4' : 'white' }}
                   >
                     <div style={{ width: 32, height: 32, borderRadius: 8, background: '#ECFDF5', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
@@ -252,7 +253,7 @@ const Checkout = () => {
                     </div>
                   </div>
                 ))}
-                <div style={{ display: 'flex', gap: '12px', marginTop: '20px', flexDirection: isMobile ? 'column-reverse' : 'row' }}>
+                <div className="checkout-actions" style={{ display: 'flex', gap: '12px', marginTop: '20px', flexDirection: isMobile ? 'column-reverse' : 'row' }}>
                   <button onClick={() => setStep(1)} className="btn btn-outline">Back</button>
                   <button onClick={() => setStep(3)} className="btn btn-primary btn-lg" style={{ flex: 1 }}>Review Order</button>
                 </div>
@@ -270,7 +271,7 @@ const Checkout = () => {
                 <div style={{ background: '#F9FAFB', borderRadius: '10px', padding: '16px', marginBottom: '20px' }}>
                   <h4 style={{ fontFamily: 'Inter, sans-serif', fontWeight: 600, marginBottom: '12px', fontSize: '0.9rem' }}>Order Items ({items.length})</h4>
                   {items.map((item) => (
-                    <div key={item.product} style={{ display: 'flex', gap: '12px', alignItems: 'center', marginBottom: '10px' }}>
+                    <div key={item.product} className="checkout-review-item" style={{ display: 'flex', gap: '12px', alignItems: 'center', marginBottom: '10px' }}>
                       <img src={item.image} alt={item.name} style={{ width: '48px', height: '48px', objectFit: 'cover', borderRadius: '6px', flexShrink: 0 }} />
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <p style={{ fontWeight: 600, fontSize: '0.9rem' }}>{item.name}</p>
@@ -280,7 +281,7 @@ const Checkout = () => {
                     </div>
                   ))}
                 </div>
-                <div style={{ display: 'flex', gap: '12px', flexDirection: isMobile ? 'column-reverse' : 'row' }}>
+                <div className="checkout-actions" style={{ display: 'flex', gap: '12px', flexDirection: isMobile ? 'column-reverse' : 'row' }}>
                   <button onClick={() => setStep(2)} className="btn btn-outline">Back</button>
                   <button onClick={handlePlaceOrder} disabled={loading} className="btn btn-primary btn-lg" style={{ flex: 1, fontSize: '1rem', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '7px' }}>
                     {loading ? <><Loader2 size={16} style={{ animation: 'spin 1s linear infinite' }} /> Processing...</> : paymentMethod === 'cod' ? <><Check size={15} /> Place Order</> : <><CreditCard size={15} /> Pay Now</>}
@@ -290,7 +291,7 @@ const Checkout = () => {
             )}
           </div>
 
-          <div style={{ background: 'white', borderRadius: '16px', padding: isMobile ? '18px' : '24px', boxShadow: '0 2px 8px rgba(0,0,0,0.06)', position: isMobile ? 'static' : 'sticky', top: '80px', order: isMobile ? -1 : 0 }}>
+          <div className="checkout-summary-card" style={{ background: 'white', borderRadius: '16px', padding: isMobile ? '18px' : '24px', boxShadow: '0 2px 8px rgba(0,0,0,0.06)', position: isMobile ? 'static' : 'sticky', top: '80px', order: isMobile ? -1 : 0 }}>
             <h3 style={{ fontFamily: 'Inter, sans-serif', fontWeight: 700, marginBottom: '16px' }}>Order Summary</h3>
             {[['Subtotal (GST incl.)', `₹${subtotal}`], ['Shipping', shipping === 0 ? 'FREE' : `₹${shipping}`], ...(discount > 0 ? [['Discount', `-₹${discount}`]] : [])].map(([label, value]) => (
               <div key={label} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px', fontSize: '0.87rem', color: '#374151' }}>
@@ -309,6 +310,66 @@ const Checkout = () => {
           </div>
         </div>
       </div>
+      <style>{`
+        @media (max-width: 768px) {
+          .checkout-page {
+            padding-top: 24px !important;
+            padding-bottom: 40px !important;
+          }
+
+          .checkout-layout {
+            gap: 16px !important;
+          }
+
+          .checkout-main-card,
+          .checkout-summary-card {
+            padding: 16px !important;
+            border-radius: 14px !important;
+          }
+
+          .checkout-two-col,
+          .checkout-three-col {
+            grid-template-columns: 1fr !important;
+          }
+
+          .checkout-payment-option {
+            align-items: flex-start !important;
+          }
+
+          .checkout-actions {
+            flex-direction: column-reverse !important;
+          }
+
+          .checkout-actions .btn {
+            width: 100% !important;
+          }
+
+          .checkout-review-item {
+            align-items: flex-start !important;
+            flex-wrap: wrap !important;
+          }
+
+          .checkout-review-item > span {
+            width: 100%;
+            margin-left: 60px;
+          }
+        }
+
+        @media (max-width: 480px) {
+          .checkout-payment-option {
+            padding: 14px !important;
+            gap: 10px !important;
+          }
+
+          .checkout-payment-option p {
+            word-break: break-word;
+          }
+
+          .checkout-review-item > span {
+            margin-left: 0;
+          }
+        }
+      `}</style>
     </>
   );
 };
