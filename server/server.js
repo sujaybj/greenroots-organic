@@ -115,15 +115,14 @@ try {
 const clientBuildPath = path.join(__dirname, '../client/build');
 app.use(express.static(clientBuildPath));
 
-app.get('/', (req, res) => {
-  res.sendFile(path.join(clientBuildPath, 'index.html'));
-});
 app.get('/api/health', (req, res) => res.json({ status: 'OK', message: 'Server is running', uptime: Math.floor(process.uptime()) }));
 
 // Catch-all for React Router - serve index.html for non-API routes
 app.get('*', (req, res) => {
   if (!req.path.startsWith('/api')) {
-    res.sendFile(path.join(clientBuildPath, 'index.html'));
+    res.sendFile(path.join(clientBuildPath, 'index.html'), (err) => {
+      if (err) console.error('Error serving index.html:', err);
+    });
   }
 });
 
