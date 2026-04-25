@@ -111,10 +111,21 @@ try {
   app.use('/api/contact', contactRoutes);
 } catch {}
 
+// ─── Serve React Build ──────────────────────────────────────
+const clientBuildPath = path.join(__dirname, '../client/build');
+app.use(express.static(clientBuildPath));
+
 app.get('/', (req, res) => {
-  res.status(200).json({ status: 'OK', message: 'GreenRoots backend is running' });
+  res.sendFile(path.join(clientBuildPath, 'index.html'));
 });
 app.get('/api/health', (req, res) => res.json({ status: 'OK', message: 'Server is running', uptime: Math.floor(process.uptime()) }));
+
+// Catch-all for React Router - serve index.html for non-API routes
+app.get('*', (req, res) => {
+  if (!req.path.startsWith('/api')) {
+    res.sendFile(path.join(clientBuildPath, 'index.html'));
+  }
+});
 
 // ─── Error Handling ──────────────────────────────────────────
 app.use(notFound);
