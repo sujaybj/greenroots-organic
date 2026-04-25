@@ -11,7 +11,7 @@ server/node_modules/
 client/node_modules/
 
 # ── Build output ──
-client/build/
+# client/build/  # Committed to git for production deployment
 
 # ── Logs ──
 *.log
