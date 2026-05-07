@@ -12,7 +12,18 @@
     "server": "npm run dev --workspace server",
     "client": "npm start --workspace client",
     "install-all": "npm install",
-    "build": "npm run build --workspace client"
+    "build": "npm run build --workspace client",
+    "test": "jest --config jest.config.js",
+    "test:server": "jest --config jest.config.server.js --watch",
+    "test:client": "jest --config jest.config.client.js --watch",
+    "test:ci": "jest --config jest.config.js --ci --coverage",
+    "test:coverage": "jest --config jest.config.js --coverage",
+    "lint": "npm run lint --workspaces --if-present",
+    "lint:fix": "npm run lint:fix --workspaces --if-present",
+    "start": "npm run dev",
+    "prebuild": "npm run test:ci",
+    "audit:fix": "npm audit fix --workspaces",
+    "audit:report": "npm audit --json > audit-report.json"
   },
   "dependencies": {
     "concurrently": "^8.2.0"

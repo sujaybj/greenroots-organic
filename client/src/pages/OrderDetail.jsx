@@ -327,6 +327,12 @@ const OrderDetail = () => {
   const hasReturnRequest = Boolean(order.returnRequest?.status);
   const hasPendingReturn = order.returnRequest?.status === 'pending';
   const canRequestReturn = order.orderStatus === 'delivered' && !hasReturnRequest;
+  const deliverySavings = order.shippingPrice === 0 ? 50 : 0;
+  const savingsItems = [
+    ['Discount on MRP', order.discountAmount],
+    ['FREE delivery savings', deliverySavings],
+  ].filter(([, value]) => value > 0);
+  const totalSavings = savingsItems.reduce((sum, [, value]) => sum + value, 0);
 
   return (
     <>
@@ -365,6 +371,18 @@ const OrderDetail = () => {
           <div style={{ background: '#FFF8E1', border: '1px solid #FDE68A', borderRadius: '10px', padding: '10px 12px', marginBottom: '14px', color: '#92400E', fontSize: '0.82rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
             <AlertTriangle size={14} color="#D97706"/>
             COD orders cannot be cancelled after packed stage. Please request a return once delivered.
+          </div>
+        )}
+
+        {order.orderStatus === 'delivered' && (
+          <div style={{ background: '#ECFDF5', border: '1px solid #BBF7D0', borderRadius: '18px', padding: '18px 20px', marginBottom: '14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '14px', flexWrap: 'wrap' }}>
+            <div style={{ minWidth: 0 }}>
+              <p style={{ margin: 0, fontSize: '0.9rem', fontWeight: 700, color: '#166534' }}>Delivered</p>
+              <p style={{ margin: '8px 0 0', color: '#134E4A', fontSize: '0.94rem', lineHeight: 1.5 }}>If you did not receive this order, contact our support team immediately for help with delivery partner coordination.</p>
+            </div>
+            <Link to="/contact" style={{ padding: '10px 18px', background: '#16A34A', color: 'white', borderRadius: '12px', fontWeight: 700, textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '8px', whiteSpace: 'nowrap' }}>
+              Get Help
+            </Link>
           </div>
         )}
 
@@ -461,22 +479,52 @@ const OrderDetail = () => {
             <div key={item._id} style={{ display: 'flex', gap: '11px', padding: '10px 0', borderBottom: '1px solid #F3F4F6', alignItems: 'center' }}>
               <img src={item.image} alt={item.name} style={{ width: '50px', height: '50px', objectFit: 'cover', borderRadius: '7px', flexShrink: 0 }}/>
               <div style={{ flex: 1 }}>
-                <p style={{ fontWeight: 600, fontSize: '0.88rem', margin: 0 }}>{item.name}</p>
-                <p style={{ color: '#9CA3AF', fontSize: '0.78rem', margin: '2px 0 0' }}>Qty: {item.quantity} {item.unit}</p>
+                <p style={{ fontWeight: 700, fontSize: '0.92rem', margin: 0 }}>{item.name}</p>
+                <p style={{ color: '#6B7280', fontSize: '0.78rem', margin: '4px 0 0' }}>{item.quantity} × {item.unit}</p>
               </div>
-              <span style={{ fontWeight: 700, color: '#2D6A4F', fontSize: '0.88rem' }}>₹{item.price * item.quantity}</span>
+              <span style={{ fontWeight: 700, color: '#2D6A4F', fontSize: '0.95rem' }}>₹{item.price * item.quantity}</span>
             </div>
           ))}
-          <div style={{ marginTop: '12px', paddingTop: '12px', borderTop: '1px solid #E5E7EB' }}>
-            {[['Items Total', `₹${order.itemsPrice}`], ['Delivery', order.shippingPrice === 0 ? 'FREE' : `₹${order.shippingPrice}`], ['Tax', `₹${order.taxPrice}`], ...(order.discountAmount > 0 ? [['Discount', `-₹${order.discountAmount}`]] : [])].map(([l, v]) => (
-              <div key={l} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '7px', fontSize: '0.85rem', color: '#374151' }}>
-                <span>{l}</span><span style={{ color: v === 'FREE' || String(v).startsWith('-') ? '#22C55E' : 'inherit', fontWeight: 500 }}>{v}</span>
-              </div>
-            ))}
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 700, fontSize: '0.98rem', borderTop: '1.5px solid #E5E7EB', paddingTop: '9px', marginTop: '4px' }}>
-              <span>Total</span><span style={{ color: '#2D6A4F' }}>₹{order.totalAmount}</span>
+        </div>
+
+        <div style={{ background: 'white', borderRadius: '14px', padding: 'clamp(14px,3vw,22px)', boxShadow: '0 2px 8px rgba(0,0,0,0.05)', marginBottom: '14px', border: '1px solid #F3F4F6' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '18px' }}>
+            <div>
+              <h3 style={{ fontFamily: 'Inter,sans-serif', fontWeight: 700, margin: 0, fontSize: '0.95rem' }}>Bill Summary</h3>
+              <p style={{ margin: '6px 0 0', fontSize: '0.82rem', color: '#6B7280' }}>A clear view of your savings and final bill.</p>
             </div>
           </div>
+          {[
+            ['Items Total', `₹${order.itemsPrice}`],
+            ['Delivery Fee', order.shippingPrice === 0 ? 'FREE' : `₹${order.shippingPrice}`],
+            ['Handling Fee', 'FREE'],
+            ...(order.discountAmount > 0 ? [['Coupon Discount', `-₹${order.discountAmount}`]] : []),
+          ].map(([l, v]) => (
+            <div key={l} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px', fontSize: '0.88rem', color: '#374151' }}>
+              <span>{l}</span>
+              <span style={{ color: v === 'FREE' || String(v).startsWith('-') ? '#16A34A' : 'inherit', fontWeight: v === 'FREE' || String(v).startsWith('-') ? 700 : 500 }}>{v}</span>
+            </div>
+          ))}
+          <div style={{ borderTop: '1.5px solid #E5E7EB', paddingTop: '12px', display: 'flex', justifyContent: 'space-between', fontWeight: 700, fontSize: '1rem', color: '#0F766E' }}>
+            <span>Total Bill</span>
+            <span>₹{order.totalAmount}</span>
+          </div>
+        </div>
+
+        <div style={{ background: '#F0FDF4', borderRadius: '14px', padding: '18px', boxShadow: '0 2px 8px rgba(16, 185, 129, 0.08)', border: '1px solid #D1FAE5', marginBottom: '14px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+            <div>
+              <p style={{ margin: 0, fontSize: '0.95rem', fontWeight: 700, color: '#115E59' }}>Savings on this order</p>
+              <p style={{ margin: '6px 0 0', color: '#164E63', fontSize: '0.82rem' }}>Discounts and free shipping saved you more.</p>
+            </div>
+            <span style={{ background: '#D1FAE5', color: '#0F766E', borderRadius: '999px', padding: '8px 12px', fontWeight: 700, fontSize: '0.95rem' }}>₹{totalSavings}</span>
+          </div>
+          {savingsItems.map(([label, value]) => (
+            <div key={label} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px', fontSize: '0.88rem', color: '#164E63' }}>
+              <span>{label}</span>
+              <span style={{ fontWeight: 700 }}>₹{value}</span>
+            </div>
+          ))}
         </div>
 
         <div style={{ background: 'white', borderRadius: '14px', padding: 'clamp(14px,3vw,22px)', boxShadow: '0 2px 8px rgba(0,0,0,0.05)', border: '1px solid #F3F4F6' }}>

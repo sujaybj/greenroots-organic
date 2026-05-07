@@ -98,13 +98,14 @@ npm run install-all
 ```bash
 cd server
 cp .env.example .env
-# Edit .env with your actual credentials
+# Edit server/.env with your actual credentials
 ```
 
 **Client config:**
 ```bash
-# Create client/.env
-echo "REACT_APP_API_URL=http://localhost:5000" > client/.env
+cd client
+cp .env.example .env
+# Edit client/.env with your frontend settings
 ```
 
 ### Step 3: Set Up External Services
@@ -153,6 +154,21 @@ db.users.updateOne(
   { email: "your@email.com" },
   { $set: { role: "admin" } }
 )
+```
+
+### Step 6: Production Build
+```bash
+# Build the frontend for production
+npm run build --workspace client
+```
+
+### Optional: Docker
+```bash
+# Build the app image from the repository root
+docker build -t greenroots-app .
+
+# Run the container with environment values from server/.env
+docker run -p 5000:5000 --env-file server/.env greenroots-app
 ```
 
 ---
@@ -256,12 +272,123 @@ cd client && npm run build
 
 ---
 
+## � Documentation
+
+Comprehensive guides for development and production:
+
+- **[Environment Setup](./ENVIRONMENT_SETUP.md)** - Configure dev/staging/production environments
+- **[Testing Guide](./TESTING.md)** - Unit tests, integration tests, and coverage
+- **[Production Deployment](./PRODUCTION_DEPLOYMENT.md)** - Deploy to production with Docker, CI/CD, monitoring
+- **[Security Checklist](./PRODUCTION_DEPLOYMENT.md#security-checklist)** - Pre-deployment security verification
+
+---
+
+## 🧪 Testing
+
+```bash
+# Run all tests
+npm test
+
+# Run server tests
+npm run test:server
+
+# Run client tests
+npm run test:client
+
+# Generate coverage report
+npm run test:coverage
+
+# CI mode (used in GitHub Actions)
+npm run test:ci
+```
+
+**Coverage Targets**: >50% lines, functions, and branches
+
+See [TESTING.md](./TESTING.md) for comprehensive testing guide.
+
+---
+
+## 📦 CI/CD Pipeline
+
+GitHub Actions workflow (`.github/workflows/ci-cd.yml`) includes:
+- ✅ Lint & test on all PRs
+- ✅ Build verification
+- ✅ Security audit (npm audit, Snyk)
+- ✅ Docker image build & push
+- ✅ Automated deployment webhook
+
+---
+
+## 🏭 Production Features
+
+- 🔄 Gzip compression enabled
+- 🔒 HTTPS redirect (production)
+- 🛡️ Helmet security headers
+- ⚡ Rate limiting (100 req/15min, 20 auth/15min)
+- 📊 Error tracking (Sentry support)
+- 🐳 Docker containerization
+- 🔌 Health check endpoint (`/api/health`)
+- 📝 Structured logging with Morgan
+- 🔄 Graceful shutdown handling
+
+---
+
+## 🚀 Deployment
+
+For complete production deployment guide, see [PRODUCTION_DEPLOYMENT.md](./PRODUCTION_DEPLOYMENT.md)
+
+### Quick Deploy to Docker
+
+```bash
+# Build image
+docker build -t organic-app:latest .
+
+# Run container
+docker run -p 5000:5000 --env-file server/.env.production organic-app:latest
+
+# Verify health
+curl http://localhost:5000/api/health
+```
+
+### Deploy to Render/Railway
+
+1. Push repository to GitHub
+2. Connect to Render/Railway
+3. Set environment variables from `server/.env.production`
+4. Deploy (automatic on push to main)
+
+### Deploy to Vercel (Frontend)
+
+```bash
+npm run build --workspace client
+# Upload client/build folder to Vercel
+# Set REACT_APP_API_URL to your production API
+```
+
+---
+
+## 📚 Scripts
+
+| Command | Description |
+|---------|-------------|
+| `npm run dev` | Run both client & server (dev mode) |
+| `npm run server` | Run backend only |
+| `npm run client` | Run frontend only |
+| `npm run build` | Build client for production |
+| `npm test` | Run all tests |
+| `npm run test:ci` | Run tests with coverage (CI mode) |
+| `npm run lint` | Lint all workspaces |
+| `npm run audit:fix` | Fix vulnerable dependencies |
+
+---
+
 ## 📝 VS Code Extensions Recommended
 - ES7+ React/Redux/React-Native snippets
 - Prettier - Code formatter
 - MongoDB for VS Code
 - REST Client (for testing APIs)
 - GitLens
+- Jest (for testing)
 
 ---
 

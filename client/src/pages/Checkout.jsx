@@ -304,8 +304,9 @@ const Checkout = () => {
               <span style={{ color: '#2D6A4F' }}>₹{total}</span>
             </div>
             <p style={{ fontSize: '0.7rem', color: '#9CA3AF', marginBottom: '12px' }}>* All prices include GST</p>
-            <div style={{ background: '#F0FDF4', borderRadius: '8px', padding: '12px', marginTop: '4px', textAlign: 'center', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '6px', width: '100%', color: '#065F46', fontSize: '0.8rem' }}>
-              <ShieldCheck size={14} /> Secured by SSL encryption
+            <div style={{ background: '#F0FDF4', borderRadius: '8px', padding: '12px', marginTop: '4px', display: 'grid', gap: '10px', color: '#065F46', fontSize: '0.8rem' }}>
+              <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '6px', width: '100%' }}><ShieldCheck size={14} /> Secured by SSL encryption</div>
+              <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '6px', width: '100%' }}><Banknote size={14} /> You saved ₹{discount + (shipping === 0 ? 50 : 0)} on this order</div>
             </div>
           </div>
         </div>

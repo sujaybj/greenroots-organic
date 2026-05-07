@@ -1,9 +1,26 @@
 # ── Environment variables (NEVER push these) ──
 server/.env
-# client/.env
-.env
-server/.env
+server/.env.local
+server/.env.development
+server/.env.staging
+server/.env.production
+client/.env
 client/.env.local
+client/.env.development
+client/.env.staging
+client/.env.production
+client/client.env
+.env
+.env.local
+.env.development
+.env.staging
+.env.production
+
+# ── Secrets & Keys ──
+*.key
+*.pem
+.aws/
+.ssh/
 
 # ── Dependencies (too large, reinstalled with npm install) ──
 node_modules/
@@ -12,10 +29,15 @@ client/node_modules/
 
 # ── Build output ──
 # client/build/  # Committed to git for production deployment
+dist/
+coverage/
 
 # ── Logs ──
 *.log
 npm-debug.log*
+yarn-error.log*
+lerna-debug.log*
+audit-report.json
 
 # ── OS files ──
 .DS_Store
@@ -23,3 +45,4 @@ Thumbs.db
 
 # ── VS Code ──
 .vscode/
+.vscode-server/

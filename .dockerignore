@@ -1,0 +1,15 @@
+node_modules
+client/node_modules
+server/node_modules
+build
+client/build
+npm-debug.log*
+Dockerfile
+.dockerignore
+.git
+.gitignore
+.env
+server/.env
+client/.env
+*.log
+.vscode
