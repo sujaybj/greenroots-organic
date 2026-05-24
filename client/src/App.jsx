@@ -8,6 +8,7 @@ import Navbar from './components/layout/Navbar';
 import Footer from './components/layout/Footer';
 import Loader from './components/common/Loader';
 import InstallAppPrompt from './components/common/InstallAppPrompt';
+import NetworkStatus from './components/common/NetworkStatus';
 import SplashScreen from './pages/SplashScreen';
 import './styles/global.css';
 
@@ -89,6 +90,7 @@ function App() {
     <HelmetProvider>
       <Router>
         <ScrollToTop />
+        <NetworkStatus />
         <Toaster position="top-right" toastOptions={{ duration: 3000, style: { fontFamily: 'Inter, sans-serif' } }} />
         <Suspense fallback={<Loader fullPage />}>
           <Routes>

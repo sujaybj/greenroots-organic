@@ -1,12 +1,28 @@
 {
   "short_name": "GreenRoots",
   "name": "GreenRoots Organics",
-  "description": "Fresh organic groceries from GreenRoots Organics.",
+  "description": "Fresh organic groceries delivered to your door from GreenRoots Organics",
   "start_url": "/",
+  "scope": "/",
   "display": "standalone",
   "orientation": "portrait-primary",
   "theme_color": "#2D6A4F",
   "background_color": "#F8FFF4",
+  "categories": ["shopping", "lifestyle"],
+  "screenshots": [
+    {
+      "src": "/icons/screenshot1.png",
+      "sizes": "540x720",
+      "type": "image/png",
+      "form_factor": "narrow"
+    },
+    {
+      "src": "/icons/screenshot2.png",
+      "sizes": "1280x720",
+      "type": "image/png",
+      "form_factor": "wide"
+    }
+  ],
   "icons": [
     {
       "src": "/icons/icon-192.svg",
@@ -20,5 +36,56 @@
       "type": "image/svg+xml",
       "purpose": "any maskable"
     }
-  ]
+  ],
+  "shortcuts": [
+    {
+      "name": "Browse Products",
+      "short_name": "Products",
+      "description": "Browse our organic products",
+      "url": "/products",
+      "icons": [
+        {
+          "src": "/icons/icon-192.svg",
+          "sizes": "192x192",
+          "type": "image/svg+xml"
+        }
+      ]
+    },
+    {
+      "name": "View Cart",
+      "short_name": "Cart",
+      "description": "Check your shopping cart",
+      "url": "/cart",
+      "icons": [
+        {
+          "src": "/icons/icon-192.svg",
+          "sizes": "192x192",
+          "type": "image/svg+xml"
+        }
+      ]
+    },
+    {
+      "name": "Order History",
+      "short_name": "Orders",
+      "description": "View your past orders",
+      "url": "/orders",
+      "icons": [
+        {
+          "src": "/icons/icon-192.svg",
+          "sizes": "192x192",
+          "type": "image/svg+xml"
+        }
+      ]
+    }
+  ],
+  "share_target": {
+    "action": "/share",
+    "method": "POST",
+    "enctype": "application/x-www-form-urlencoded",
+    "params": {
+      "title": "title",
+      "text": "text",
+      "url": "url"
+    }
+  }
 }
