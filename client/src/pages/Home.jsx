@@ -65,7 +65,7 @@ const Home = () => {
                 <Leaf size={13} color="#74C69D" strokeWidth={2}/> GreenRoots Organics
               </span>
               <h1 style={{ color: 'white', fontSize: 'clamp(2rem,4.5vw,3.4rem)', lineHeight: 1.15, fontFamily: 'Playfair Display,serif', marginBottom: '16px' }}>
-                Nature's Best,<br/>Delivered to You
+                Nature's Best <br/>Delivered to You
               </h1>
               <p style={{ color: 'rgba(255,255,255,0.82)', fontSize: 'clamp(0.9rem,1.6vw,1.05rem)', lineHeight: 1.85, marginBottom: '28px', maxWidth: '460px' }}>
                 From fresh farms directly to your table. No pesticides, no chemicals — just pure goodness your family deserves.
